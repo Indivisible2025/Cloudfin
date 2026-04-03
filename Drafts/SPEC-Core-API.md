@@ -237,7 +237,7 @@ UI                          Core
 
 ### 4.3 core.info
 
-**描述**：获取 Core 版本和技术信息
+**描述**：获取 Core 元信息（版本、作者、许可证、链接），用于 UI 显示
 
 **RESPONSE**：
 ```json
@@ -245,8 +245,13 @@ UI                          Core
   "id": "msg_000001",
   "type": "RESPONSE",
   "result": {
-    "name": "Cloudfin",
+    "name": "Cloudfin Core",
     "version": "0.1.0",
+    "developer": "Cloudfin Team",
+    "license": "AGPL-3.0",
+    "licenseUrl": "https://www.gnu.org/licenses/agpl-3.0.html",
+    "website": "https://cloudfin.io",
+    "github": "https://github.com/indivisible2025/Cloudfin",
     "commit": "b37cc7a",
     "rustVersion": "1.94.1",
     "protocolVersion": "1.0",
@@ -423,34 +428,59 @@ UI                          Core
   "id": "msg_000006",
   "type": "RESPONSE",
   "result": {
+    "core": {
+      "version": "0.1.0",
+      "name": "Cloudfin Core",
+      "developer": "Cloudfin Team",
+      "license": "AGPL-3.0",
+      "website": "https://cloudfin.io",
+      "github": "https://github.com/indivisible2025/Cloudfin"
+    },
     "modules": [
       {
         "id": "p2p",
         "name": "P2P Network",
+        "nameZh": "P2P 网络",
         "version": "0.1.0",
-        "status": "running",        // loaded | running | stopped | error
-        "description": "P2P node discovery and connection"
+        "status": "running",
+        "publishedAt": "2026-01-15T00:00:00Z",
+        "updatedAt": "2026-03-20T12:30:00Z",
+        "description": "P2P node discovery and connection",
+        "author": {
+          "name": "Cloudfin Team",
+          "github": "https://github.com/indivisible2025"
+        },
+        "license": {
+          "spdx": "AGPL-3.0",
+          "name": "Affero General Public License v3.0",
+          "commercial": false
+        },
+        "links": {
+          "source": "https://github.com/indivisible2025/cloudfin-mod-p2p",
+          "documentation": "https://docs.cloudfin.io/modules/p2p"
+        }
       },
       {
         "id": "tor",
         "name": "Tor Protocol",
+        "nameZh": "Tor 协议",
         "version": "0.1.0",
         "status": "loaded",
-        "description": "Tor protocol wrapper"
-      },
-      {
-        "id": "i2p",
-        "name": "I2P Protocol",
-        "version": "0.1.0",
-        "status": "loaded",
-        "description": "I2P protocol wrapper"
-      },
-      {
-        "id": "crdt",
-        "name": "CRDT Sync",
-        "version": "0.1.0",
-        "status": "stopped",
-        "description": "CRDT synchronization engine"
+        "publishedAt": "2026-02-01T00:00:00Z",
+        "updatedAt": "2026-03-15T08:00:00Z",
+        "description": "Tor protocol wrapper based on Arti",
+        "author": {
+          "name": "Cloudfin Team",
+          "github": "https://github.com/indivisible2025"
+        },
+        "license": {
+          "spdx": "AGPL-3.0",
+          "name": "Affero General Public License v3.0",
+          "commercial": false
+        },
+        "links": {
+          "source": "https://github.com/indivisible2025/cloudfin-mod-tor"
+        }
       }
     ]
   }

@@ -103,6 +103,11 @@ Cloudfin-Core/
 pub struct CoreState {
     // 元数据
     pub version: Version,
+    pub name: String,                    // "Cloudfin Core"
+    pub developer: String,               // "Cloudfin Team"
+    pub license: String,                 // "AGPL-3.0"
+    pub website: String,                 // "https://cloudfin.io"
+    pub github: String,                  // "https://github.com/indivisible2025/Cloudfin"
     pub started_at: DateTime<Utc>,
     pub commit: String,
 
@@ -124,9 +129,113 @@ pub struct CoreState {
     // 日志
     pub log_level: RwLock<LevelFilter>,
 }
+
+/// Core 自身元数据（供 UI 显示）
+#[derive(Serialize)]
+pub struct CoreInfo {
+    pub version: String,
+    pub name: String,
+    pub developer: String,
+    pub license: String,
+    pub website: String,
+    pub github: String,
+    pub started_at: String,
+    pub uptime_seconds: u64,
+}
+
+/// 模块完整元数据（从 manifest.json 解析，供 UI 显示）
+#[derive(Serialize)]
+pub struct ModuleDetail {
+    pub id: ModuleId,
+    pub name: String,
+    pub name_zh: Option<String>,
+    pub version: String,
+    pub status: ModuleStatus,
+    pub published_at: String,
+    pub updated_at: String,
+    pub description: String,
+    pub description_zh: Option<String>,
+    pub author: ModuleAuthor,
+    pub license: ModuleLicense,
+    pub links: ModuleLinks,
+    pub compatibility: ModuleCompatibility,
+    pub tags: Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct ModuleAuthor {
+    pub name: String,
+    pub email: Option<String>,
+    pub github: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct ModuleLicense {
+    pub spdx: String,
+    pub name: String,
+    pub commercial: bool,
+}
+
+#[derive(Serialize)]
+pub struct ModuleLinks {
+    pub source: Option<String>,
+    pub documentation: Option<String>,
+    pub bug_report: Option<String>,
+    pub changelog: Option<String>,
+}
 ```
 
-### 2.2 启动流程
+### 2.2 元数据流向（Core → UI）
+
+Core 必须向 UI 透传所有已知信息，包括 Core 自身和所有模块的完整元数据。
+
+```
+模块 manifest.json
+        │
+        ▼
+   Core 解析 manifest
+   提取所有元数据
+        │
+        ├─▶ 存储在 ModuleRegistry
+        │       │
+        │       ▼
+        │   modules.list API 返回
+        │       │
+        │       ▼
+        │   UI 显示模块信息
+        │
+        └─▶ 模块事件携带元数据
+                │
+                ▼
+            UI 收到事件
+
+Core 自身元数据
+        │
+        ▼
+   CoreState 存储
+        │
+        ├─▶ core.info API 返回
+        │
+        └─▶ modules.list 响应中的 core 字段
+```
+
+**UI 必须能看到的完整信息**：
+
+| 信息类型 | 来源 | API |
+|---------|------|-----|
+| Core 版本 | CoreState | `core.info` |
+| Core 开发者 | CoreState | `core.info` |
+| Core 许可证 | CoreState | `core.info` |
+| Core 链接 | CoreState | `core.info` |
+| 模块版本 | manifest.json | `modules.list` |
+| 模块发布时间 | manifest.json | `modules.list` |
+| 模块更新时间 | manifest.json | `modules.list` |
+| 模块作者 | manifest.json | `modules.list` |
+| 模块许可证 | manifest.json | `modules.list` |
+| 模块链接 | manifest.json | `modules.list` |
+| 模块状态 | ModuleRegistry | `modules.list` |
+
+### 2.3 启动流程
 
 ```
 main()
@@ -496,7 +605,35 @@ COMMANDS:
   shutdown          关闭 Core
 ```
 
-### 7.2 实现方式
+### 7.2 CLI 跨平台说明
+
+| 平台 | CLI 可能性 | 说明 |
+|------|-----------|------|
+| **Android** | ❌ 不适用 | 用户无 Terminal，用 App UI |
+| **iOS** | ❌ 不适用 | 沙盒限制，无 CLI |
+| **Linux** | ✅ 主要平台 | 运维、自动化脚本 |
+| **macOS** | ✅ 可选 | 终端用户 + App 用户 |
+| **Windows** | ✅ 可选 | PowerShell 用户 + GUI 用户 |
+
+**Core 交互方式**：
+
+```
+桌面端：
+CLI（bash/powershell）──WebSocket──▶ Core
+UI（App）──────────WebSocket──▶ Core
+
+移动端：
+App（Kotlin/Swift）──WebSocket──▶ Core
+```
+
+**CLI 实际用途**：
+- 服务器运维（Linux/macOS/Windows Server）
+- 开发者调试（所有平台）
+- 自动化脚本和 CI/CD
+
+**Android/iOS 用户通过 App UI 与 Core 交互**，不涉及 CLI。
+
+### 7.3 实现方式
 
 cloudfinctl 使用与 UI 相同的 WebSocket 连接，只是请求格式改为命令行参数转换。
 

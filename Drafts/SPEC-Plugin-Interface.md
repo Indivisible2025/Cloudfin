@@ -27,16 +27,26 @@ Core 是房东，模块是租客。接口 = 租客必须遵守的规矩（做什
     "name": "P2P Network",
     "nameZh": "P2P 网络",
     "version": "0.1.0",
+    "publishedAt": "2026-01-15T00:00:00Z",
+    "updatedAt": "2026-03-20T12:30:00Z",
     "description": "P2P peer discovery and connection management",
     "descriptionZh": "P2P 节点发现与连接管理",
-    "icon": "modules/icons/p2p.png"
+    "icon": "modules/icons/p2p.png",
+    "tags": ["p2p", "network", "discovery"]
   },
-  "developer": {
+  "author": {
     "name": "Cloudfin Team",
     "email": "dev@cloudfin.io",
     "website": "https://cloudfin.io",
-    "github": "https://github.com/indivisible2025/cloudfin-mod-p2p"
+    "github": "https://github.com/indivisible2025"
   },
+  "maintainers": [
+    {
+      "name": "Primary Maintainer",
+      "email": "maintainer@cloudfin.io",
+      "github": "https://github.com/maintainer"
+    }
+  ],
   "license": {
     "spdx": "GPL-3.0",
     "name": "GNU General Public License v3.0",
@@ -85,13 +95,17 @@ Core 是房东，模块是租客。接口 = 租客必须遵守的规矩（做什
 | `module.name` | ✅ | 模块英文名称 |
 | `module.nameZh` | ❌ | 模块中文名称 |
 | `module.version` | ✅ | 语义化版本 x.y.z |
+| `module.publishedAt` | ✅ | 首次发布时间（ISO 8601）|
+| `module.updatedAt` | ✅ | 最后更新时间（ISO 8601）|
 | `module.description` | ✅ | 英文描述 |
 | `module.descriptionZh` | ❌ | 中文描述 |
 | `module.icon` | ❌ | 图标路径（相对于模块目录）|
-| `developer.name` | ✅ | 开发者名称 |
-| `developer.email` | ❌ | 开发者邮箱 |
-| `developer.website` | ❌ | 开发者网站 |
-| `developer.github` | ❌ | GitHub 地址 |
+| `module.tags` | ❌ | 模块标签（用于搜索和分类）|
+| `author.name` | ✅ | 作者/团队名称 |
+| `author.email` | ❌ | 作者邮箱 |
+| `author.website` | ❌ | 作者网站 |
+| `author.github` | ❌ | GitHub 组织/个人页 |
+| `maintainers` | ❌ | 维护者列表（数组）|
 | `license.spdx` | ✅ | SPDX 许可证标识符 |
 | `license.name` | ✅ | 许可证全称 |
 | `license.url` | ❌ | 许可证链接 |
