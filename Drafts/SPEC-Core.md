@@ -108,6 +108,8 @@ pub struct CoreState {
     pub license: String,                 // "AGPL-3.0"
     pub website: String,                 // "https://cloudfin.io"
     pub github: String,                  // "https://github.com/indivisible2025/Cloudfin"
+    pub published_at: DateTime<Utc>,    // 首次发布时间
+    pub updated_at: DateTime<Utc>,      // 最后更新时间
     pub started_at: DateTime<Utc>,
     pub commit: String,
 
@@ -137,8 +139,11 @@ pub struct CoreInfo {
     pub name: String,
     pub developer: String,
     pub license: String,
+    pub license_url: String,
     pub website: String,
     pub github: String,
+    pub published_at: String,           // 首次发布时间
+    pub updated_at: String,             // 最后更新时间
     pub started_at: String,
     pub uptime_seconds: u64,
 }

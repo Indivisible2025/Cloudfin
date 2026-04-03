@@ -237,7 +237,7 @@ UI                          Core
 
 ### 4.3 core.info
 
-**描述**：获取 Core 元信息（版本、作者、许可证、链接），用于 UI 显示
+**描述**：获取 Core 元信息（版本、作者、许可证、链接、发布时间），用于 UI 显示
 
 **RESPONSE**：
 ```json
@@ -252,6 +252,8 @@ UI                          Core
     "licenseUrl": "https://www.gnu.org/licenses/agpl-3.0.html",
     "website": "https://cloudfin.io",
     "github": "https://github.com/indivisible2025/Cloudfin",
+    "publishedAt": "2026-01-01T00:00:00Z",
+    "updatedAt": "2026-04-03T00:00:00Z",
     "commit": "b37cc7a",
     "rustVersion": "1.94.1",
     "protocolVersion": "1.0",
@@ -434,7 +436,9 @@ UI                          Core
       "developer": "Cloudfin Team",
       "license": "AGPL-3.0",
       "website": "https://cloudfin.io",
-      "github": "https://github.com/indivisible2025/Cloudfin"
+      "github": "https://github.com/indivisible2025/Cloudfin",
+      "publishedAt": "2026-01-01T00:00:00Z",
+      "updatedAt": "2026-04-03T00:00:00Z"
     },
     "modules": [
       {
