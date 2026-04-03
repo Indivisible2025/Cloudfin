@@ -544,7 +544,7 @@ CRDT 模块              Core                    I2P 模块
     "fileAccess": "module_private"
   },
   "build": {
-    "output": "modules/libcloudfin_i2p.so",
+    "output": "modules/cloudfin_i2p.so",
     "targets": [
       "x86_64-unknown-linux-gnu",
       "aarch64-unknown-linux-gnu",

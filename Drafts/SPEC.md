@@ -119,12 +119,12 @@ Cloudfin Core = **无头守护进程框架**，类比以下工具的设计理念
 ```
 modules/
 ├── modules/
-│   ├── libcloudfin_p2p.so      （P2P 网络发现+连接）
-│   ├── libcloudfin_tor.so       （Tor 协议封装）
-│   ├── libcloudfin_i2p.so       （I2P 协议封装）
-│   ├── libcloudfin_crdt.so     （CRDT 同步引擎）
-│   ├── libcloudfin_crypto.so   （端到端加密/密钥管理/数字签名）
-│   └── libcloudfin_storage.so   （本地数据存储）
+│   ├── cloudfin_p2p.so      （P2P 网络发现+连接）
+│   ├── cloudfin_tor.so       （Tor 协议封装）
+│   ├── cloudfin_i2p.so       （I2P 协议封装）
+│   ├── cloudfin_crdt.so     （CRDT 同步引擎）
+│   ├── cloudfin_crypto.so   （端到端加密/密钥管理/数字签名）
+│   └── cloudfin_storage.so   （本地数据存储）
 ```
 
 ### 3.4 配置存储

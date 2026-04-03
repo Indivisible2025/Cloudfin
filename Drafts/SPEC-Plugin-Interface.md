@@ -70,7 +70,7 @@ Core 是房东，模块是租客。接口 = 租客必须遵守的规矩（做什
     "fileAccess": "module_private"
   },
   "build": {
-    "output": "modules/libcloudfin_p2p.so",
+    "output": "modules/cloudfin_p2p.so",
     "targets": ["x86_64-unknown-linux-gnu", "aarch64-apple-darwin", "aarch64-linux-android"]
   }
 }

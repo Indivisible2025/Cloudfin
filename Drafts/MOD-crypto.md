@@ -903,7 +903,7 @@ P2P 模块              Core                    Crypto 模块
     "fileAccess": "none"
   },
   "build": {
-    "output": "modules/libcloudfin_crypto.so",
+    "output": "modules/cloudfin_crypto.so",
     "targets": [
       "x86_64-unknown-linux-gnu",
       "aarch64-unknown-linux-gnu",

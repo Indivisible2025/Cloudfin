@@ -682,7 +682,7 @@ P2P 模块              Core                    Tor 模块
     "fileAccess": "module_private"
   },
   "build": {
-    "output": "modules/libcloudfin_tor.so",
+    "output": "modules/cloudfin_tor.so",
     "targets": [
       "x86_64-unknown-linux-gnu",
       "aarch64-unknown-linux-gnu",

@@ -669,7 +669,7 @@ CRDT 模块记录这次修改（A=[增:第3行"hello"]）
     "fileAccess": "module_public"
   },
   "build": {
-    "output": "modules/libcloudfin_crdt.so",
+    "output": "modules/cloudfin_crdt.so",
     "targets": [
       "x86_64-unknown-linux-gnu",
       "aarch64-unknown-linux-gnu",

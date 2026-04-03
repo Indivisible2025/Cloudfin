@@ -681,7 +681,7 @@ P2P 模块启动，监听 19000 端口
     "fileAccess": "module_private"
   },
   "build": {
-    "output": "modules/libcloudfin_p2p.so",
+    "output": "modules/cloudfin_p2p.so",
     "targets": [
       "x86_64-unknown-linux-gnu",
       "aarch64-unknown-linux-gnu",
