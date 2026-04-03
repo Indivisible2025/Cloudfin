@@ -114,7 +114,7 @@ P2P 模块 ──▶ Core ──▶ modules.call ──▶ Tor 模块
 第四步：开始使用
 ```
 
-详细流程见 [Drafts/SPEC-Install-Flow.md](Drafts/SPEC-Install-Flow.md)
+详细流程待定义（SPEC-Install-Flow.md 待编写）
 
 ---
 
@@ -142,41 +142,46 @@ Cloudfin 采用**文档优先**的开发流程：
 ## 文档体系
 
 ```
-Cloudfin/Drafts/
-├── SPEC.md                      ← 总架构文档（宪法级）
-├── SPEC-Review.md               ← 文档审查机制
-├── SPEC-Core.md                 ← Core 核心规格
-├── SPEC-Core-API.md             ← WebSocket API 规格
-├── SPEC-Plugin-Interface.md     ← 模块插件接口规格
-├── MOD-p2p.md                   ← P2P 模块规格
-├── MOD-tor.md                   ← Tor 模块规格
-├── MOD-i2p.md                  ← I2P 模块规格
-├── MOD-crdt.md                  ← CRDT 模块规格
-├── MOD-crypto.md                ← Crypto 模块规格
-└── SPEC-Install-Flow.md         ← 安装引导流程规格
+Cloudfin/
+├── SPEC.md                        ← 总架构文档（宪法级，L0）
+├── cloudfin-core/docs/
+│   ├── SPEC-Core.md               ← Core 技术规格（L1）
+│   └── Core-API.md                ← WebSocket API 规格（L1）
+├── cloudfin-mod/
+│   ├── common/                    ← Module trait 定义
+│   ├── p2p/                      ← P2P 模块
+│   └── crdt/                      ← CRDT 模块
+└── cloudfin-ui/docs/
+    ├── SPEC-UI-Mobile.md          ← 移动端 UI 规格（L3）
+    └── SPEC-UI-Desktop.md        ← 桌面端 UI 规格（L3）
 ```
 
 **审查层级**：
-- L0（宪法）：SPEC.md、SPEC-Review.md
-- L1（法律）：SPEC-Core.md、SPEC-Core-API.md、SPEC-Plugin-Interface.md
-- L2（法规）：MOD-*.md
-- L3（地方法规）：SPEC-Install-Flow.md、SPEC-UI-*.md
+- L0（宪法）：SPEC.md
+- L1（法律）：SPEC-Core.md、Core-API.md
+- L2（法规）：各 MOD-*.md（待补充）
+- L3（地方法规）：SPEC-UI-*.md
 
-详见 [Drafts/SPEC-Review.md](Drafts/SPEC-Review.md)
+详见 [SPEC.md](SPEC.md#审查层级)
 
 ---
 
 ## 状态
 
-**当前状态**：架构设计阶段（v0.1.0-draft）
+**当前状态**：核心功能实现阶段（v1.0）
 
-所有 SPEC 文档均已审查确认，可进入实现阶段。
+- ✅ Core WebSocket 服务端实现
+- ✅ Android UI + Jetpack Compose
+- ✅ P2P / CRDT 模块（cargo check 通过）
+- ⬜ 模块配置面板 UI
+- ⬜ TOR / I2P 模块实现
+- ⬜ 桌面端 UI 开发
 
 ---
 
 ## 参与贡献
 
-欢迎参与讨论和技术设计。提交前请阅读 [Drafts/SPEC-Review.md](Drafts/SPEC-Review.md) 了解审查机制。
+欢迎参与讨论和技术设计。提交前请阅读 [SPEC.md](SPEC.md#开发方法论) 了解开发方法论。
 
 ---
 
