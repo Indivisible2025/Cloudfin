@@ -20,12 +20,12 @@ fun BottomNavBar(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
     themeMode: ThemeMode,
-    wallpaperConfig: com.cloudfin.ui.theme.WallpaperConfig?
+    isDarkTheme: Boolean
 ) {
-    val navBackground = when (themeMode) {
-        ThemeMode.WALLPAPER -> Color.Black.copy(alpha = 0.75f)
-        ThemeMode.DARK -> Color(0xFF1E1E1E)
-        else -> Color.White
+    val navBackground = when {
+        themeMode == ThemeMode.WALLPAPER -> Color.Black.copy(alpha = 0.75f)
+        isDarkTheme -> Color(0xFF1E1E1E)
+        else -> Color(0xFFF5F5F5)
     }
 
     Box(

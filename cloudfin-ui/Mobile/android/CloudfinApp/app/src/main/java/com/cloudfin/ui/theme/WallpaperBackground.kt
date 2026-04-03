@@ -1,5 +1,6 @@
 package com.cloudfin.ui.theme
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,10 +21,12 @@ fun WallpaperBackground(
         return
     }
 
+    val imageUri = Uri.fromFile(File(wallpaperConfig.path))
+
     Box(modifier = Modifier.fillMaxSize()) {
         // 图层1: 壁纸
         AsyncImage(
-            model = File(wallpaperConfig.path),
+            model = imageUri,
             contentDescription = "wallpaper",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop

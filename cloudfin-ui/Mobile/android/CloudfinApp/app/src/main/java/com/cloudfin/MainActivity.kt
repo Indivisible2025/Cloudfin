@@ -1,11 +1,13 @@
 package com.cloudfin
 
 import android.os.Bundle
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,10 +41,18 @@ fun CloudfinApp(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // 图片选择器（必须在 composable 内）
+    // 系统亮度跟随
+    val isDarkTheme = when (uiState.themeMode) {
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.WALLPAPER -> isSystemInDarkTheme()
+    }
+
+    // 图片选择器
     val pickMedia = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        uri?.let {
-            val inputStream = context.contentResolver.openInputStream(it)
+        uri?.let { selectedUri ->
+            val inputStream = context.contentResolver.openInputStream(selectedUri)
             val file = File(context.filesDir, "wallpaper.png")
             FileOutputStream(file).use { out ->
                 inputStream?.copyTo(out)
@@ -66,7 +76,7 @@ fun CloudfinApp(
                         selectedTab = uiState.selectedTab,
                         onTabSelected = { viewModel.selectTab(it) },
                         themeMode = uiState.themeMode,
-                        wallpaperConfig = uiState.wallpaperConfig
+                        isDarkTheme = isDarkTheme
                     )
                 }
             ) { paddingValues ->
