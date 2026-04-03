@@ -24,6 +24,7 @@ fun SettingsScreen(
     wallpaperConfig: WallpaperConfig?,
     onThemeChange: (ThemeMode) -> Unit,
     onWallpaperChange: (WallpaperConfig?) -> Unit,
+    onSelectWallpaper: () -> Unit = {},
     themeModes: List<ThemeMode> = ThemeMode.entries
 ) {
     Column(
@@ -67,7 +68,8 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
             WallpaperOptions(
                 wallpaperConfig = wallpaperConfig,
-                onChange = onWallpaperChange
+                onChange = { onWallpaperChange(it) },
+                onSelectImage = onSelectWallpaper
             )
         }
 
@@ -111,7 +113,8 @@ fun SettingsRow(label: String, value: String) {
 @Composable
 fun WallpaperOptions(
     wallpaperConfig: WallpaperConfig?,
-    onChange: (WallpaperConfig) -> Unit
+    onChange: (WallpaperConfig) -> Unit,
+    onSelectImage: () -> Unit
 ) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -133,35 +136,43 @@ fun WallpaperOptions(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
                     )
+                } ?: run {
+                    Text(
+                        "未选择图片",
+                        modifier = Modifier.align(Alignment.Center),
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
                 }
             }
 
             Spacer(Modifier.height(8.dp))
 
-            Button(onClick = { /* 打开图片选择器 */ }) {
+            Button(onClick = onSelectImage) {
                 Text("选择图片")
             }
 
-            Spacer(Modifier.height(16.dp))
+            if (wallpaperConfig?.path != null) {
+                Spacer(Modifier.height(16.dp))
 
-            // 遮罩强度
-            Text("遮罩强度: ${((wallpaperConfig?.overlayOpacity ?: 0.55f) * 100).toInt()}%")
-            Slider(
-                value = wallpaperConfig?.overlayOpacity ?: 0.55f,
-                onValueChange = { onChange(wallpaperConfig!!.copy(overlayOpacity = it)) },
-                valueRange = 0.45f..0.75f
-            )
-
-            // 模糊效果
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("模糊效果")
-                Switch(
-                    checked = wallpaperConfig?.blurEnabled ?: false,
-                    onCheckedChange = { onChange(wallpaperConfig!!.copy(blurEnabled = it)) }
+                // 遮罩强度
+                Text("遮罩强度: ${((wallpaperConfig.overlayOpacity) * 100).toInt()}%")
+                Slider(
+                    value = wallpaperConfig.overlayOpacity,
+                    onValueChange = { onChange(wallpaperConfig.copy(overlayOpacity = it)) },
+                    valueRange = 0.45f..0.75f
                 )
+
+                // 模糊效果
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("模糊效果")
+                    Switch(
+                        checked = wallpaperConfig.blurEnabled,
+                        onCheckedChange = { onChange(wallpaperConfig.copy(blurEnabled = it)) }
+                    )
+                }
             }
         }
     }

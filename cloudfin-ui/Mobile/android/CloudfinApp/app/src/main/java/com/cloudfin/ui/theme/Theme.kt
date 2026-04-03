@@ -26,7 +26,7 @@ fun CloudfinTheme(
         ThemeMode.DARK -> true
         ThemeMode.LIGHT -> false
         ThemeMode.SYSTEM -> systemDark
-        ThemeMode.WALLPAPER -> true // 壁纸模式强制暗色文字
+        ThemeMode.WALLPAPER -> systemDark // 壁纸模式跟随系统亮度
     }
 
     val colors = if (isDark) DarkColorPalette else LightColorPalette

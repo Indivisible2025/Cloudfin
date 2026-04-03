@@ -20,7 +20,7 @@ data class MainUiState(
     val peers: List<NetworkPeer> = emptyList(),
     val docs: List<SyncDoc> = emptyList(),
     val isLoading: Boolean = false,
-    val themeMode: ThemeMode = ThemeMode.DARK,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val wallpaperConfig: WallpaperConfig? = null
 )
 
