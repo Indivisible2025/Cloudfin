@@ -3,8 +3,8 @@ resolver = "2"
 members = [
     "core",
     "cli",
-    "plugins/common",
-    "plugins/p2p",
+    "../cloudfin-mod/common",
+    "../cloudfin-mod/p2p",
 ]
 
 [workspace.package]
