@@ -15,7 +15,141 @@
 
 Core 是房东，模块是租客。接口 = 租客必须遵守的规矩（做什么、用什么格式、什么时候干什么）。
 
-### 1.2 设计目标
+### 1.2 模块清单（ModuleManifest）
+
+每个模块根目录必须包含 `manifest.json`，用于 Core 识别模块的完整元数据：
+
+```json
+{
+  "manifestVersion": "1.0",
+  "module": {
+    "id": "p2p",
+    "name": "P2P Network",
+    "nameZh": "P2P 网络",
+    "version": "0.1.0",
+    "description": "P2P peer discovery and connection management",
+    "descriptionZh": "P2P 节点发现与连接管理",
+    "icon": "modules/icons/p2p.png"
+  },
+  "developer": {
+    "name": "Cloudfin Team",
+    "email": "dev@cloudfin.io",
+    "website": "https://cloudfin.io",
+    "github": "https://github.com/indivisible2025/cloudfin-mod-p2p"
+  },
+  "license": {
+    "spdx": "GPL-3.0",
+    "name": "GNU General Public License v3.0",
+    "url": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "commercial": false
+  },
+  "links": {
+    "source": "https://github.com/indivisible2025/cloudfin-mod-p2p",
+    "documentation": "https://docs.cloudfin.io/modules/p2p",
+    "bugReport": "https://github.com/indivisible2025/cloudfin-mod-p2p/issues",
+    "changelog": "https://github.com/indivisible2025/cloudfin-mod-p2p/blob/main/CHANGELOG.md"
+  },
+  "compatibility": {
+    "coreMinVersion": "0.1.0",
+    "coreMaxVersion": "0.9.9",
+    "platforms": ["linux", "macos", "android", "windows"]
+  },
+  "dependencies": {
+    "native": [],
+    "rust": [],
+    "system": []
+  },
+  "permissions": {
+    "canCall": ["tor", "i2p", "crypto"],
+    "canSubscribe": ["tor", "i2p"],
+    "canAccessConfig": false
+  },
+  "security": {
+    "sandboxed": true,
+    "networkAccess": "module_only",
+    "fileAccess": "module_private"
+  },
+  "build": {
+    "output": "modules/libcloudfin_p2p.so",
+    "targets": ["x86_64-unknown-linux-gnu", "aarch64-apple-darwin", "aarch64-linux-android"]
+  }
+}
+```
+
+**字段说明**：
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `manifestVersion` | ✅ | 清单格式版本，当前 "1.0" |
+| `module.id` | ✅ | 模块唯一 ID（小写字母+数字）|
+| `module.name` | ✅ | 模块英文名称 |
+| `module.nameZh` | ❌ | 模块中文名称 |
+| `module.version` | ✅ | 语义化版本 x.y.z |
+| `module.description` | ✅ | 英文描述 |
+| `module.descriptionZh` | ❌ | 中文描述 |
+| `module.icon` | ❌ | 图标路径（相对于模块目录）|
+| `developer.name` | ✅ | 开发者名称 |
+| `developer.email` | ❌ | 开发者邮箱 |
+| `developer.website` | ❌ | 开发者网站 |
+| `developer.github` | ❌ | GitHub 地址 |
+| `license.spdx` | ✅ | SPDX 许可证标识符 |
+| `license.name` | ✅ | 许可证全称 |
+| `license.url` | ❌ | 许可证链接 |
+| `license.commercial` | ✅ | 是否允许商用 |
+| `links.source` | ✅ | 源代码地址 |
+| `links.documentation` | ❌ | 文档地址 |
+| `links.bugReport` | ❌ | Bug 反馈地址 |
+| `links.changelog` | ❌ | 变更日志地址 |
+| `compatibility.coreMinVersion` | ✅ | 最低兼容 Core 版本 |
+| `compatibility.coreMaxVersion` | ❌ | 最高兼容 Core 版本 |
+| `compatibility.platforms` | ✅ | 支持的平台列表 |
+| `permissions` | ✅ | 模块权限请求 |
+| `security.sandboxed` | ✅ | 是否沙箱隔离 |
+| `security.networkAccess` | ✅ | 网络访问范围 |
+| `security.fileAccess` | ✅ | 文件访问范围 |
+| `build.output` | ✅ | 编译输出路径 |
+| `build.targets` | ✅ | 支持的编译目标 |
+
+**license.commercial 含义**：
+- `false`：只能免费使用，包括商业项目中的免费使用
+- `true`：允许商业使用，需购买授权
+
+**security.networkAccess 选项**：
+- `none`：不允许网络访问
+- `module_only`：只能使用模块自己声明的端口
+- `all`：可以访问任意网络（危险，仅可信模块）
+
+**security.fileAccess 选项**：
+- `none`：不允许文件访问
+- `module_private`：只能读写模块私有目录
+- `module_public`：可以读写模块目录和部分公共目录
+- `all`：可以访问任意文件（危险，仅可信模块）|
+
+### 1.3 Core 对清单的识别流程
+
+```
+扫描 modules/ 目录
+     │
+     ├─ 查找 manifest.json
+     │   └─ 不存在 → 跳过（不加载）
+     │
+     ├─ 解析清单
+     │   ├─ 校验必填字段
+     │   ├─ 检查 coreMinVersion ≤ 当前 Core 版本 ≤ coreMaxVersion
+     │   └─ 检查平台兼容性
+     │
+     ├─ 验证 license
+     │   ├─ GPL/AGPL → 标记为传染性许可证
+     │   └─ 商业授权 → 标记为专有
+     │
+     ├─ 验证签名（可选）
+     │   └─ 官方模块验证 Ed25519 签名
+     │
+     └─ 注册模块到 ModuleLoader
+         显示：模块名 v版本 | 开发者 | 许可证 | 商用许可
+```
+
+### 1.4 设计目标
 
 | 目标 | 说明 |
 |------|------|
@@ -24,7 +158,7 @@ Core 是房东，模块是租客。接口 = 租客必须遵守的规矩（做什
 | **安全** | 模块能干什么、不能干什么，接口说了算 |
 | **可扩展** | 新模块不用改 Core 代码，只要实现接口就行 |
 
-### 1.3 模块分类
+### 1.5 模块分类
 
 | 类型 | 说明 | 示例 |
 |------|------|------|
