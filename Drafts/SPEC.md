@@ -230,6 +230,7 @@ Cloudfin/
 │   ├── MOD-crdt.md              ← CRDT 模块规格
 │   └── MOD-crypto.md            ← Crypto 模块规格
 │
+├── SPEC-UI-Common.md            ← 跨平台通用 UI 设计
 ├── SPEC-UI-Android.md            ← Android UI 规格
 ├── SPEC-UI-iOS.md               ← iOS UI 规格
 ├── SPEC-UI-Desktop.md            ← 桌面端 UI 规格
