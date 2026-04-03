@@ -356,23 +356,170 @@
 | 系统默认 | 跟随系统设置 | `MediaQuery.platformBrightnessOf(context)` |
 | 图片背景 | 自定义图片 + 暗色遮罩 | 背景图 + 半透明卡片 |
 
-**图片背景层级（底→顶）**：
+---
+
+## 6.2 图片背景图层架构
+
+**核心原则**：背景层与内容层完全分离，背景固定不动，内容层覆盖其上。
+
+**完整图层栈（底→顶）**：
+
 ```
-图片层 → 暗色遮罩(alpha≈0.5) → SafeArea+内容 → 底部导航
+┌─────────────────────────────────────────┐  ← 图层0：根容器（Stack/Overlay）
+│                                         │
+│  ┌─────────────────────────────────┐   │
+│  │ 图层1: Image.asset(图片)        │   │  ← 充满整个屏幕，centerCrop
+│  │ Positioned.fill                  │   │
+│  │ 无 SafeArea 包裹                  │   │
+│  └─────────────────────────────────┘   │
+│                                         │
+│  ┌─────────────────────────────────┐   │
+│  │ 图层2: 遮罩层                    │   │  ← Container(color=黑色)
+│  │ Positioned.fill                  │   │    alpha = 遮罩强度 × 255
+│  │ Color.fromRGBO(0,0,0,遮罩强度)   │   │    范围: 0.45 ~ 0.75
+│  └─────────────────────────────────┘   │
+│                                         │
+│  ┌─────────────────────────────────┐   │
+│  │ 图层3: 毛玻璃层（可选）          │   │  ← 仅"模糊效果"启用时渲染
+│  │ BackdropFilter.blur(sigma: 10)  │   │    覆盖内容区域（不含底部栏）
+│  └─────────────────────────────────┘   │
+│                                         │
+│  ┌─────────────────────────────────┐   │
+│  │ 图层4: SafeArea + 内容           │   │  ← SafeArea 包裹整个内容区
+│  │ ┌───────────────────────────┐   │   │    底部栏在 SafeArea 外固定定位
+│  │ │ 页面内容（ListView等）   │   │   │
+│  │ │ 背景色: transparent       │   │   │
+│  │ └───────────────────────────┘   │   │
+│  └─────────────────────────────────┘   │
+│                                         │
+│  ┌─────────────────────────────────┐   │
+│  │ 图层5: 底部导航栏                │   │  ← SafeArea 外，不被模糊影响
+│  │ Container(                         │   │    自身有半透明深色背景
+│  │ │   color: Color.fromRGBO(        │   │    保证在任何壁纸上都可读
+│  │ │     0,0,0, 0.75)              │   │
+│  │ │ )                              │   │
+│  └─────────────────────────────────┘   │
+│                                         │
+│  ┌─────────────────────────────────┐   │
+│  │ 图层6: Dialog / BottomSheet     │   │  ← 自带背景或毛玻璃
+│  │ BackdropFilter.blur + 深色填充   │   │    不继承父级透明背景
+│  └─────────────────────────────────┘   │
+└─────────────────────────────────────────┘
 ```
 
-**图片背景主题限制**：
-- 背景图自动叠加暗色遮罩（保持文字可读性）
-- Card 背景设为 `transparent`，露出底部壁纸
-- Card 边框改为 `BorderSide(color: Colors.white.alpha(30))`
+**遮罩强度预设**：
+| 强度值 | 适用场景 |
+|--------|---------|
+| 0.45 | 浅色/模糊壁纸 |
+| 0.55 | 默认推荐 |
+| 0.65 | 深色/复杂壁纸 |
+| 0.75 | 极高对比需求 |
 
-### 6.2 主题色板
+---
+
+### 6.3 图片背景组件规范
+
+**图片获取与存储**：
+```dart
+// 从相册选择 → 保存到应用私有目录 → 持久化路径
+// 图片路径存储在 SharedPreferences / UserDefaults
+final wallPaperPath = await ImagePicker.pickImage();
+await saveToAppDirectory(wallPaperPath);  // getApplicationDocumentsDirectory()
+```
+
+**图片缩放模式**：
+```
+✓ ImageFit: BoxFit.cover    ← 填充整个屏幕，可能裁剪
+✗ BoxFit.contain           ← 可能留黑边，不推荐
+✗ BoxFit.fill              ← 拉伸变形，禁止使用
+```
+
+**背景图片显示逻辑**：
+```dart
+Scaffold(
+  body: Stack(
+    children: [
+      // 图层1: 壁纸（无 SafeArea）
+      if (themeMode == ThemeMode.imageBackground)
+        Positioned.fill(
+          child: Image.file(
+            File(wallPaperPath),
+            fit: BoxFit.cover,
+          ),
+        ),
+
+      // 图层2: 遮罩
+      if (themeMode == ThemeMode.imageBackground)
+        Positioned.fill(
+          child: Container(
+            color: Colors.black.withOpacity(overlayOpacity),
+          ),
+        ),
+
+      // 图层3: SafeArea + 内容
+      SafeArea(
+        child: ...page content...,
+      ),
+    ],
+  ),
+
+  // 底部栏：单独处理，不在 SafeArea 内
+  bottomNavigationBar: themeMode == ThemeMode.imageBackground
+    ? Container(
+        color: Color.fromRGBO(0, 0, 0, 0.75),
+        child: ...navigation items...,
+      )
+    : null,
+);
+```
+
+**状态栏处理**：
+```dart
+// 图片背景模式下状态栏强制显示浅色图标（Dark模式）
+SystemChrome.setSystemUIOverlayStyle(
+  SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
+  ),
+);
+```
+
+**滚动边界问题**：
+```
+✓ ListView/GridView 的 physics 应为 AlwaysScrollableScrollPhysics()
+✓ 只有内容区滚动，背景不滚动
+✓ 使用 NotificationListener 监听滚动，背景保持固定
+✗ 禁止在背景 Image 上直接放滚动组件
+```
+
+**Dialog / BottomSheet 背景**：
+```dart
+// 禁止 Dialog 直接继承透明背景
+showModalBottomSheet(
+  backgroundColor: Color.fromRGBO(30, 30, 30, 0.95),
+  // 或使用毛玻璃
+  child: BackdropFilter(
+    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+    child: Container(
+      color: Color.fromRGBO(30, 30, 30, 0.8),
+      child: ...sheet content...,
+    ),
+  ),
+);
+```
+
+---
+
+### 6.4 主题色板
 
 **暗色模式**：
 - 主色：`#6C63FF`（紫蓝）
 - 背景：`#121212`
-- 卡片：`transparent`（露出背景）
-- 文字：`#E0E0E0`
+- 卡片背景：`transparent`（露出壁纸）
+- 卡片边框：`BorderSide(color: Colors.white.alpha(20))`
+- 文字主：`#E0E0E0`
+- 文字次：`#B0B0B0`
 - 成功：`#4CAF50`
 - 警告：`#FFC107`
 - 错误：`#F44336`
@@ -380,8 +527,10 @@
 **亮色模式**：
 - 主色：`#6C63FF`
 - 背景：`#FAFAFA`
-- 卡片：`transparent`
-- 文字：`#212121`
+- 卡片背景：`transparent`
+- 卡片边框：`BorderSide(color: Colors.black.alpha(10))`
+- 文字主：`#212121`
+- 文字次：`#757575`
 - 成功/警告/错误：同上
 
 ### 6.2 圆角 & 间距
