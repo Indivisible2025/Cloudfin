@@ -150,6 +150,11 @@ Crypto 模块 = **为通信过程提供端到端加密和解密**，保护数据
         },
         "randomness": {
           "source": "system"
+        },
+        "pipeline": {
+          "mode": "custom",
+          "defaultChain": ["crypto"],
+          "customChains": {}
         }
       }
     }
@@ -168,6 +173,154 @@ Crypto 模块 = **为通信过程提供端到端加密和解密**，保护数据
 | `keyManagement.autoRotate` | Boolean | `true` | 是否自动轮换密钥 |
 | `keyManagement.rotateInterval` | Integer | `2592000` | 密钥轮换间隔（秒），默认 30 天 |
 | `keyManagement.keyDerivation` | String | `hkdf` | 密钥派生函数 |
+| `pipeline.mode` | String | `custom` | 加密管道模式：`single`/`multi`/`custom` |
+| `pipeline.defaultChain` | Array | `["crypto"]` | 默认加密链 |
+| `pipeline.customChains` | Object | `{}` | 自定义加密链 |
+
+### 3.3 加密管道（Encryption Pipeline）
+
+> 用户可配置单重或多重加密，以及加密顺序
+
+#### 3.3.1 管道模式
+
+| 模式 | 说明 | 适用场景 |
+|------|------|---------|
+| `single` | 单重加密，只用 Crypto 模块 | 默认，最常用 |
+| `multi` | 多重加密，按顺序应用多个加密层 | 高安全需求 |
+| `custom` | 完全自定义加密链 | 高级用户 |
+
+#### 3.3.2 内置加密层
+
+| 层标识 | 说明 | 算法 |
+|--------|------|------|
+| `crypto` | Crypto 模块端到端加密 | ChaCha20Poly1305 |
+| `tor` | Tor 链路加密 | Tor 自己的加密 |
+| `i2p` | I2P 隧道加密 | I2P AES-256 |
+| `p2p` | P2P 链路加密 | libp2p 加密 |
+| `tls13` | TLS 1.3 加密 | TLS_AES_256_GCM_SHA384 |
+
+#### 3.3.3 加密链配置
+
+**单重加密**（默认）：
+```json
+{
+  "pipeline": {
+    "mode": "single",
+    "defaultChain": ["crypto"]
+  }
+}
+```
+
+**双重加密**（crypto + tor）：
+```json
+{
+  "pipeline": {
+    "mode": "multi",
+    "defaultChain": ["crypto", "tor"]
+  }
+}
+```
+数据流向：明文 → crypto加密 → tor加密 → 密文传输
+
+**三重加密**（高安全）：
+```json
+{
+  "pipeline": {
+    "mode": "multi",
+    "defaultChain": ["crypto", "tor", "tls13"]
+  }
+}
+```
+数据流向：明文 → crypto加密 → tor加密 → tls13加密 → 密文传输
+
+**四重加密**（最高安全）：
+```json
+{
+  "pipeline": {
+    "mode": "multi",
+    "defaultChain": ["crypto", "i2p", "tor", "tls13"]
+  }
+}
+```
+
+#### 3.3.4 自定义加密链
+
+```json
+{
+  "pipeline": {
+    "mode": "custom",
+    "customChains": {
+      "我的链1": ["crypto", "tor"],
+      "我的链2": ["crypto", "i2p", "tls13"],
+      "极速模式": ["crypto"],
+      "隐私模式": ["crypto", "tor", "i2p"]
+    },
+    "defaultChain": ["crypto", "tor"]
+  }
+}
+```
+
+#### 3.3.5 加密顺序规则
+
+| 规则 | 说明 |
+|------|------|
+| **从内到外** | `["crypto", "tor"]` 表示：crypto 在内层（最先加密），tor 在外层（最后加密后传输）|
+| **内层先加密** | 数据先生成密文（crypto），再通过其他链路传输（tor）|
+| **外层先解密** | 接收时先剥除外层（tor），再解密内层（crypto）|
+
+**示例**：`["crypto", "tor"]` 的加解密流程：
+
+```
+发送方：
+明文 → [crypto加密] → 密文1 → [tor加密] → 密文2 → 传输
+
+接收方：
+收到密文2 → [tor解密] → 密文1 → [crypto解密] → 明文
+```
+
+#### 3.3.6 预设加密链
+
+| 预设名称 | 加密链 | 说明 |
+|---------|--------|------|
+| `default` | `["crypto"]` | 仅端到端加密（最快）|
+| `balanced` | `["crypto", "tor"]` | 端到端 + 链路加密（平衡）|
+| `paranoid` | `["crypto", "tor", "tls13"]` | 端到端 + 链路 + TLS（最高安全）|
+| `i2p-tor` | `["crypto", "i2p", "tor"]` | I2P + Tor 双链路 |
+
+```json
+{
+  "pipeline": {
+    "mode": "single",
+    "defaultChain": ["crypto"]
+  },
+  "presets": {
+    "default": ["crypto"],
+    "balanced": ["crypto", "tor"],
+    "paranoid": ["crypto", "tor", "tls13"],
+    "i2p-tor": ["crypto", "i2p", "tor"]
+  }
+}
+```
+
+#### 3.3.7 用户设置接口
+
+用户可以在 App UI 中设置加密策略，调用以下方法：
+
+```json
+// 设置加密链
+modules.call crypto.set_pipeline { chain: ["crypto", "tor"] }
+
+// 获取当前加密链
+modules.call crypto.get_pipeline {}
+  → { chain: ["crypto", "tor"], mode: "multi" }
+
+// 使用预设
+modules.call crypto.use_preset { preset: "balanced" }
+
+// 查看所有可用层
+modules.call crypto.list_layers {}
+  → { layers: ["crypto", "tor", "i2p", "p2p", "tls13"] }
+```
 
 ---
 
@@ -190,6 +343,10 @@ Crypto 模块 = **为通信过程提供端到端加密和解密**，保护数据
 | `decrypt_from_peer` | **通过 Core 调用**：解密来自指定对等方的数据 | peerPublicKey, ephemeralPublicKey, ciphertext, nonce | { plaintext } |
 | `seal_box` | **通过 Core 调用**：简易加密（类似 NaCl secretbox）| peerPublicKey, plaintext | { ciphertext, nonce } |
 | `open_seal` | **通过 Core 调用**：简易解密 | senderPublicKey, ciphertext, nonce | { plaintext } |
+| `set_pipeline` | **通过 Core 调用**：设置加密管道 | chain, mode | { set: true, chain, mode } |
+| `get_pipeline` | **通过 Core 调用**：获取当前加密管道 | — | { chain, mode, presets } |
+| `use_preset` | **通过 Core 调用**：使用预设加密链 | preset | { applied: true, chain } |
+| `list_layers` | **通过 Core 调用**：列出所有可用加密层 | — | { layers: [...] } |
 
 ### 4.2 方法详细定义
 
@@ -439,6 +596,131 @@ Crypto 模块 = **为通信过程提供端到端加密和解密**，保护数据
 
 ---
 
+### 4.3 加密管道方法（用户可配置）
+
+#### set_pipeline
+
+**描述**：设置加密管道（多层加密顺序）
+
+**参数**：
+```json
+{
+  "chain": ["crypto", "tor"],
+  "mode": "multi"
+}
+```
+
+**chain**：加密层列表，从内到外（内层先加密，外层最后）
+**mode**：`single`（单层）或 `multi`（多层）
+
+**返回值**：
+```json
+{
+  "set": true,
+  "chain": ["crypto", "tor"],
+  "mode": "multi",
+  "effectiveLayers": 2
+}
+```
+
+**可用加密层**：
+| 标识 | 说明 |
+|------|------|
+| `crypto` | 端到端加密（必须存在，否则无加密）|
+| `tor` | Tor 链路加密 |
+| `i2p` | I2P 隧道加密 |
+| `p2p` | P2P 链路加密 |
+| `tls13` | TLS 1.3 链路加密 |
+
+**示例**：
+```json
+// 只用 crypto（最快）
+{ "chain": ["crypto"], "mode": "single" }
+
+// crypto + tor（平衡）
+{ "chain": ["crypto", "tor"], "mode": "multi" }
+
+// crypto + i2p + tor（最高隐私）
+{ "chain": ["crypto", "i2p", "tor"], "mode": "multi" }
+```
+
+---
+
+#### get_pipeline
+
+**描述**：获取当前加密管道配置
+
+**参数**：无
+
+**返回值**：
+```json
+{
+  "chain": ["crypto", "tor"],
+  "mode": "multi",
+  "presets": {
+    "default": ["crypto"],
+    "balanced": ["crypto", "tor"],
+    "paranoid": ["crypto", "tor", "tls13"],
+    "i2p-tor": ["crypto", "i2p", "tor"]
+  },
+  "availableLayers": ["crypto", "tor", "i2p", "p2p", "tls13"]
+}
+```
+
+---
+
+#### use_preset
+
+**描述**：使用预设加密链
+
+**参数**：
+```json
+{
+  "preset": "balanced"
+}
+```
+
+**预设列表**：
+| 预设名 | 加密链 | 说明 |
+|--------|--------|------|
+| `default` | `["crypto"]` | 仅端到端加密 |
+| `balanced` | `["crypto", "tor"]` | 端到端 + Tor |
+| `paranoid` | `["crypto", "tor", "tls13"]` | 最高安全 |
+| `i2p-tor` | `["crypto", "i2p", "tor"]` | I2P + Tor 双链路 |
+
+**返回值**：
+```json
+{
+  "applied": true,
+  "preset": "balanced",
+  "chain": ["crypto", "tor"]
+}
+```
+
+---
+
+#### list_layers
+
+**描述**：列出所有可用的加密层
+
+**返回值**：
+```json
+{
+  "layers": [
+    { "id": "crypto", "name": "端到端加密", "available": true },
+    { "id": "tor", "name": "Tor 链路加密", "available": true },
+    { "id": "i2p", "name": "I2P 隧道加密", "available": true },
+    { "id": "p2p", "name": "P2P 链路加密", "available": true },
+    { "id": "tls13", "name": "TLS 1.3 加密", "available": true }
+  ],
+  "requiredLayer": "crypto"
+}
+```
+
+**available**：该层是否可用（取决于对应模块是否已加载）
+
+---
+
 ## 5. 事件
 
 ### 5.1 Crypto 模块推送的事件
@@ -452,6 +734,8 @@ Crypto 模块 = **为通信过程提供端到端加密和解密**，保护数据
 | `crypto.key_rotated` | 密钥轮换 | 自动或手动轮换密钥 |
 | `crypto.key_deleted` | 密钥删除 | delete_key 成功 |
 | `crypto.operation_failed` | 操作失败 | encrypt/decrypt/sign 失败 |
+| `crypto.pipeline_changed` | 加密管道变更 | 用户修改了加密链 |
+| `crypto.layer_unavailable` | 加密层不可用 | 请求的加密层对应的模块未加载 |
 
 ### 5.2 事件格式
 
@@ -647,6 +931,11 @@ P2P 模块              Core                    Crypto 模块
 □ 适用范围/情况已列出
 □ encrypt_for_peer / decrypt_from_peer / seal_box / open_seal 定义为外部接口
 □ manifest.json 所有必填字段完整
+□ 加密管道配置（单重/多重/自定义）已定义
+□ 加密顺序规则已说明
+□ 预设加密链（default/balanced/paranoid/i2p-tor）已定义
+□ set_pipeline / get_pipeline / use_preset / list_layers 方法已定义
+□ 加密层可用性检测（对应模块是否加载）已实现
 □ 许可证为 Apache-2.0（允许商用）
 ```
 
