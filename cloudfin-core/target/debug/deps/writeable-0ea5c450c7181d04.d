@@ -1,0 +1,11 @@
+/home/nainyv/.openclaw/workspace/Cloudfin/cloudfin-core/target/debug/deps/writeable-0ea5c450c7181d04.d: /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/lib.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/cmp.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/concat.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/impls.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/ops.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/parts_write_adapter.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/try_writeable.rs
+
+/home/nainyv/.openclaw/workspace/Cloudfin/cloudfin-core/target/debug/deps/libwriteable-0ea5c450c7181d04.rmeta: /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/lib.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/cmp.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/concat.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/impls.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/ops.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/parts_write_adapter.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/try_writeable.rs
+
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/lib.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/cmp.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/concat.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/impls.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/ops.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/parts_write_adapter.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/writeable-0.6.3/src/try_writeable.rs:
