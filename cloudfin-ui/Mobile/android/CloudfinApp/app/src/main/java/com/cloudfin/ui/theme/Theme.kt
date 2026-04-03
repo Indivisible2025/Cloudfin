@@ -31,12 +31,7 @@ fun CloudfinTheme(
 
     val colors = if (isDark) DarkColorPalette else LightColorPalette
 
-    // 壁纸模式特殊处理
-    val backgroundColor = if (themeMode == ThemeMode.WALLPAPER) {
-        Color.Transparent // 露出壁纸
-    } else {
-        if (isDark) Color(0xFF121212) else Color(0xFFFAFAFA)
-    }
+
 
     CompositionLocalProvider(
         LocalThemeMode provides themeMode,

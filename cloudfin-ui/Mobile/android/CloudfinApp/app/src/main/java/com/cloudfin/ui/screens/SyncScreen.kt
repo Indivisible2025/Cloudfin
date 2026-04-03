@@ -49,16 +49,11 @@ fun SyncScreen(
     themeMode: ThemeMode,
     wallpaperConfig: WallpaperConfig?
 ) {
-    val backgroundColor = when (themeMode) {
-        ThemeMode.WALLPAPER -> Color.Transparent
-        ThemeMode.DARK -> Color(0xFF121212)
-        else -> Color(0xFFFAFAFA)
-    }
-
+    val rootBackground = if (themeMode == ThemeMode.WALLPAPER) Color.Transparent else MaterialTheme.colorScheme.background
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(rootBackground)
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),

@@ -27,10 +27,11 @@ fun SettingsScreen(
     onSelectWallpaper: () -> Unit = {},
     themeModes: List<ThemeMode> = ThemeMode.entries
 ) {
+    val rootBackground = if (themeMode == ThemeMode.WALLPAPER) Color.Transparent else MaterialTheme.colorScheme.surface
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(rootBackground)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
