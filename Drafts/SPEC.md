@@ -215,9 +215,11 @@ modules/
 Cloudfin/
 ├── SPEC.md                      ← 总架构文档（本文）
 │
-├── SPEC-Core.md                 ← Core 核心规格
-│   ├── Core-API.md              ← Core HTTP API 规格
-│   ├── Core-Plugin-Interface.md ← 模块插件接口规格
+├── SPEC-Review.md                ← 文档审查机制（宪法级）
+│
+├── SPEC-Core.md                  ← Core 核心规格
+│   ├── SPEC-Core-API.md          ← Core WebSocket API 规格
+│   ├── SPEC-Plugin-Interface.md ← 模块插件接口规格
 │   └── Core-Config.md            ← 配置存储格式
 │
 ├── SPEC-Modules.md               ← 模块通用规格
