@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["OffsetKind"],"struct":["Doc","Options"]};

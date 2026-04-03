@@ -1,0 +1,9 @@
+(function() {
+    const implementors = Object.fromEntries([["yrs",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.94.1/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"yrs/encoding/read/enum.Error.html\" title=\"enum yrs::encoding::read::Error\">Error</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.94.1/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"yrs/enum.TransactionAcqError.html\" title=\"enum yrs::TransactionAcqError\">TransactionAcqError</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.94.1/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"yrs/error/enum.Error.html\" title=\"enum yrs::error::Error\">Error</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.94.1/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"yrs/error/enum.UpdateError.html\" title=\"enum yrs::error::UpdateError\">UpdateError</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.94.1/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"yrs/sync/awareness/enum.Error.html\" title=\"enum yrs::sync::awareness::Error\">Error</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.94.1/core/error/trait.Error.html\" title=\"trait core::error::Error\">Error</a> for <a class=\"enum\" href=\"yrs/sync/protocol/enum.Error.html\" title=\"enum yrs::sync::protocol::Error\">Error</a>",0]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":59,"fragment_lengths":[1579]}

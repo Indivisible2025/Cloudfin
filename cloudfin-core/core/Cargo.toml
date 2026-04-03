@@ -18,3 +18,4 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 hostname = "0.4"
 tower-http = { version = "0.6", features = ["trace"] }
+futures = "0.3"

@@ -1,0 +1,12 @@
+/home/nainyv/.openclaw/workspace/Cloudfin/cloudfin-core/target/debug/deps/core2-197fba1569acd67d.d: /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/lib.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/error.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/mod.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/cursor.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/error.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/impls.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/traits.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/util.rs
+
+/home/nainyv/.openclaw/workspace/Cloudfin/cloudfin-core/target/debug/deps/libcore2-197fba1569acd67d.rmeta: /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/lib.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/error.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/mod.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/cursor.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/error.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/impls.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/traits.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/util.rs
+
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/lib.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/error.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/mod.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/cursor.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/error.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/impls.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/traits.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/core2-0.4.0/src/io/util.rs:

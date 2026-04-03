@@ -1,0 +1,9 @@
+/home/nainyv/.openclaw/workspace/Cloudfin/target/debug/deps/anstyle_parse-99a825add116413d.d: /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/lib.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/params.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/state/mod.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/state/definitions.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/state/table.rs
+
+/home/nainyv/.openclaw/workspace/Cloudfin/target/debug/deps/libanstyle_parse-99a825add116413d.rmeta: /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/lib.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/params.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/state/mod.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/state/definitions.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/state/table.rs
+
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/lib.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/params.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/state/mod.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/state/definitions.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/anstyle-parse-1.0.0/src/state/table.rs:

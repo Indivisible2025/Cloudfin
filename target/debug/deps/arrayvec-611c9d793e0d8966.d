@@ -1,0 +1,11 @@
+/home/nainyv/.openclaw/workspace/Cloudfin/target/debug/deps/arrayvec-611c9d793e0d8966.d: /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/lib.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/arrayvec_impl.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/arrayvec.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/array_string.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/char.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/errors.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/utils.rs
+
+/home/nainyv/.openclaw/workspace/Cloudfin/target/debug/deps/libarrayvec-611c9d793e0d8966.rmeta: /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/lib.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/arrayvec_impl.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/arrayvec.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/array_string.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/char.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/errors.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/utils.rs
+
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/lib.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/arrayvec_impl.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/arrayvec.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/array_string.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/char.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/errors.rs:
+/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/arrayvec-0.7.6/src/utils.rs:

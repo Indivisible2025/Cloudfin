@@ -71,3 +71,12 @@ data class DocInfo(
     val lastModified: String,
     val syncStatus: SyncStatus
 )
+
+// ─── Config ─────────────────────────────────────────────────────────────────
+
+data class Config(
+    val deviceName: String? = null,
+    val deviceId: String? = null,
+    val listenHost: String? = null,
+    val listenPort: Int? = null
+)
