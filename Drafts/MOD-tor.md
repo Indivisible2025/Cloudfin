@@ -220,7 +220,7 @@ Bootstrap 是 Tor 模块启动时必经的过程：
 
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `socksPort` | Integer | `9050` | SOCKS5 代理端口 |
+| `socksPort` | Integer | `9050` | SOCKS5 端口（内部使用，不对外） |
 | `controlPort` | Integer | `9051` | 控制端口（用于控制命令）|
 | `dataDirectory` | String | 平台默认 | Tor 数据目录（节点信息、密钥等）|
 | `bridges.enabled` | Boolean | `false` | 是否启用桥接 |
@@ -252,6 +252,8 @@ Bootstrap 是 Tor 模块启动时必经的过程：
 | `bridge_add` | 添加桥接 | bridge | { added: true } |
 | `bridge_remove` | 移除桥接 | bridge | { removed: true } |
 | `dns_query` | 通过 Tor 执行 DNS 查询 | hostname | { addresses: [...] } |
+| `proxy` | **通过 Core 调用**：代理 TCP 连接（供其他模块使用）| target, host, port, data, timeout | { success, response, circuitId, exitCountry, duration } |
+| `proxy_request` | **通过 Core 调用**：发送 HTTP/HTTPS 请求（供其他模块使用）| method, url, headers, body, timeout | { statusCode, headers, body, circuitId, duration } |
 
 ### 4.2 方法详细定义
 
@@ -497,38 +499,111 @@ Bootstrap 是 Tor 模块启动时必经的过程：
 
 ---
 
-## 6. SOCKS5 代理接口
+## 6. 模块间通信（通过 Core）
 
-### 6.1 代理地址
+> **核心原则**：所有模块间通信必须通过 Core，`modules.call` 是唯一入口。模块不能直接连接其他模块的端口，SOCKS5 端口是 Tor 模块的内部实现，不对外暴露。
+
+### 6.1 通信架构
+
+```
+P2P 模块              Core                    Tor 模块
+    │                  │                         │
+    │ ──▶ modules.call │ ──▶ module.call() ────▶│
+    │                  │                         │
+    │                  │◀── result ─────────────│
+    │◀── result ───────│                         │
+```
+
+**规则**：
+- P2P **不能**直接连接 Tor 的 SOCKS5 端口
+- P2P **必须**通过 Core 的 `modules.call` 调用 Tor
+- 返回结果也**必须**通过 Core 传回 P2P
+
+### 6.2 proxy 方法（对外接口）
+
+**描述**：通过 Tor 网络代理 TCP 连接
+
+**调用方式**（其他模块通过 Core 调用）：
+```json
+{
+  "id": "msg_000001",
+  "type": "REQUEST",
+  "action": "modules.call",
+  "payload": {
+    "moduleId": "tor",
+    "method": "proxy",
+    "args": {
+      "target": "tcp",
+      "host": "example.com",
+      "port": 443,
+      "data": "base64_encoded_data",
+      "timeout": 30000
+    }
+  }
+}
+```
+
+**返回值**：
+```json
+{
+  "id": "msg_000001",
+  "type": "RESPONSE",
+  "result": {
+    "success": true,
+    "response": "base64_encoded_response",
+    "circuitId": "circuit_001",
+    "exitCountry": "NL",
+    "duration": 1250
+  }
+}
+```
+
+**错误码**：
+| code | message | 说明 |
+|------|---------|------|
+| 404 | TARGET_NOT_REACHABLE | Tor 网络无法到达目标 |
+| 408 | PROXY_TIMEOUT | 代理请求超时 |
+| 500 | CIRCUIT_FAILED | Tor 电路建立失败 |
+| 501 | TOR_NOT_RUNNING | Tor 模块未运行 |
+
+### 6.3 proxy_request 方法
+
+**描述**：通过 Tor 发送完整的 HTTP/HTTPS 请求
+
+**args**：
+```json
+{
+  "method": "GET",
+  "url": "https://example.com/path",
+  "headers": { "User-Agent": "Cloudfin/1.0" },
+  "body": null,
+  "timeout": 30000
+}
+```
+
+**返回值**：
+```json
+{
+  "id": "msg_000001",
+  "type": "RESPONSE",
+  "result": {
+    "statusCode": 200,
+    "headers": { "Content-Type": "text/html" },
+    "body": "base64_encoded_response",
+    "circuitId": "circuit_002",
+    "duration": 2100
+  }
+}
+```
+
+### 6.4 内部 SOCKS5 端口（不对外）
 
 | 协议 | 地址 | 说明 |
 |------|------|------|
-| SOCKS5 | `127.0.0.1:9050` | 标准 Tor SOCKS5 代理（默认）|
-| SOCKS5 | `127.0.0.1:9051` | 控制端口 |
-| HTTP | `127.0.0.1:9052` | HTTP 代理（可选）|
-| DNS | `127.0.0.1:9053` | DNS 解析（启用 dns.enable 时）|
+| SOCKS5 | `127.0.0.1:9050` | Tor 内部使用，Core 内部连接 |
+| Control | `127.0.0.1:9051` | Tor 控制协议，Core 内部使用 |
 
-### 6.2 使用方式
-
-其他模块通过 SOCKS5 代理使用 Tor：
-
-```
-P2P 模块想通过 Tor 发送数据：
-
-P2P 模块 ──▶ 127.0.0.1:9050（SOCKS5）
-                  │
-                  │ 加密，发送到 Tor 网络
-                  ▼
-             Entry Guard ──▶ Middle ──▶ Exit Node
-                                              │
-                                              ▼
-                                         目标服务器
-
-优点：
-├─ P2P 模块不需要知道 Tor 内部实现
-├─ 只需要配置 SOCKS5 代理
-└─ 可以随时切换到直接连接或其他模块
-```
+**这些端口不暴露给其他模块**，仅 Tor 模块内部使用。
 
 ---
 
@@ -629,7 +704,8 @@ P2P 模块 ──▶ 127.0.0.1:9050（SOCKS5）
 □ 所有方法的 JSON Schema 完整
 □ Bootstrap 流程正确（目录下载 → Entry Guard → 建立电路）
 □ 桥接（obfs4/snowflake/meek）支持已定义
-□ SOCKS5 代理接口已定义
+□ proxy / proxy_request 对外接口已定义
+□ SOCKS5 定位为内部实现，不对外暴露
 □ 事件推送 9 种类型完整
 □ 模块状态机 6 个状态正确
 □ 配置字段完整且有默认值
