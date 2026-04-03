@@ -246,8 +246,9 @@ Cloudfin/
     ├── docs/
     │   ├── SPEC-UI-Mobile.md       ← 移动端 UI 规格（L3）
     │   └── SPEC-UI-Desktop.md      ← 桌面端 UI 规格（L3）
-    └── android/
-        └── CloudfinApp/           ← Android 原生应用
+    └── Mobile/
+        └── android/
+            └── CloudfinApp/      ← Android 原生应用
 ```
 
 ---
