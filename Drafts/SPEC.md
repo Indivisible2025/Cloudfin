@@ -143,11 +143,11 @@ modules/
 
 | 模块 | 功能 | 许可证（规划）|
 |------|------|-------------|
-| p2p | P2P 节点发现与连接 | GPL v3 |
-| tor | Tor 协议封装 | AGPL v3 |
-| i2p | I2P 协议封装 | AGPL v3 |
-| crdt | CRDT 同步引擎 | 商业授权 |
-| crypto | 端到端加密、密钥管理、数字签名 | Apache 2.0 |
+| p2p | P2P 节点发现与连接 | AGPL-3.0 |
+| tor | Tor 协议封装 | 待定 |
+| i2p | I2P 协议封装 | 待定 |
+| crdt | CRDT 同步引擎 | AGPL-3.0 |
+| crypto | 端到端加密、密钥管理、数字签名 | 商业授权 |
 | storage | 本地数据持久化 | Apache 2.0 |
 
 （详见各模块规格文档 MOD-*.md）
