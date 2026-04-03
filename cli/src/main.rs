@@ -1,9 +1,9 @@
 //! Cloudfin CLI - cloudfinctl
 
 use anyhow::Result;
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 #[derive(Parser)]
 #[command(name = "cloudfinctl")]
@@ -56,8 +56,8 @@ struct ApiResponse<T> {
 struct CoreStatus {
     version: String,
     uptime_secs: u64,
+    #[allow(dead_code)]
     modules: serde_json::Value,
-    config: serde_json::Value,
 }
 
 #[tokio::main]
@@ -105,7 +105,7 @@ async fn main() -> Result<()> {
             }
         }
         
-        Commands::Modules { action } => {
+        Commands::Modules { action: _ } => {
             let resp = client
                 .get(format!("{}/api/modules", cli.url))
                 .send()

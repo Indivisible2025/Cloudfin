@@ -1,8 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "core",
-    "plugins/common",
+    "cli",
+    # "core",  # TODO: add src/lib.rs or src/main.rs
+    # "plugins/common",  # TODO: add src/lib.rs or src/main.rs
 ]
 
 [workspace.package]
