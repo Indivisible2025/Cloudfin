@@ -220,6 +220,7 @@ Cloudfin/
 │
 ├── SPEC-Core.md                  ← Core 核心规格
 │   ├── SPEC-Core-API.md          ← Core WebSocket API 规格
+│   ├── SPEC-Core-Interaction.md ← Core 交互逻辑规格（CLI/UI/Module）
 │   ├── SPEC-Plugin-Interface.md ← 模块插件接口规格
 │   └── Core-Config.md            ← 配置存储格式
 │
