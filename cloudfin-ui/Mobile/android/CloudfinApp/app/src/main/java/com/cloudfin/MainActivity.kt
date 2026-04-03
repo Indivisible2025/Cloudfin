@@ -69,18 +69,21 @@ fun CloudfinApp(
                         wallpaperConfig = uiState.wallpaperConfig
                     )
                     2 -> NetworkScreen(
-                        peers = uiState.peers,
-                        onDisconnect = { viewModel.disconnectPeer(it) },
+                        p2pState = null,
+                        peers = uiState.peers.map { PeerInfo(id = it.id, name = it.id, addr = it.addr, latencyMs = null, connectedAt = 0) },
+                        isLoading = uiState.isLoading,
                         onAddPeer = { viewModel.showAddPeerDialog() },
                         onRefresh = { viewModel.refreshPeers() },
                         themeMode = uiState.themeMode,
                         wallpaperConfig = uiState.wallpaperConfig
                     )
                     3 -> SyncScreen(
-                        docs = uiState.docs,
+                        syncState = null,
+                        documents = uiState.docs.map { DocInfo(id = it.id, name = it.name, sizeKb = 0, lastModified = "", syncStatus = if (it.synced) com.cloudfin.model.SyncStatus.SYNCED else com.cloudfin.model.SyncStatus.SYNCING) },
+                        isLoading = uiState.isLoading,
                         onCreateDoc = { viewModel.createDoc() },
-                        onImportDoc = { viewModel.importDoc() },
-                        onExportDoc = { viewModel.exportDoc(it) },
+                        onImport = { viewModel.importDoc() },
+                        onExport = { viewModel.exportDoc("") },
                         themeMode = uiState.themeMode,
                         wallpaperConfig = uiState.wallpaperConfig
                     )

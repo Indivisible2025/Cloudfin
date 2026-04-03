@@ -1,6 +1,9 @@
 package com.cloudfin.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 
 // 主色
 val Primary = Color(0xFF6C63FF)
@@ -27,7 +30,7 @@ val DarkBorder = Color(0x33FFFFFF) // 20% white
 val LightBorder = Color(0x1A000000) // 10% black
 
 // 暗色主题调色板
-val DarkColorPalette = lightColors().copy(
+val DarkColorPalette = darkColorScheme(
     primary = Primary,
     background = DarkBackground,
     surface = DarkSurface,
@@ -39,7 +42,7 @@ val DarkColorPalette = lightColors().copy(
 )
 
 // 亮色主题调色板
-val LightColorPalette = lightColors().copy(
+val LightColorPalette = lightColorScheme(
     primary = Primary,
     background = LightBackground,
     surface = LightSurface,

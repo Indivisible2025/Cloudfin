@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.WifiTethering
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -146,11 +145,7 @@ fun P2pStatusCard(state: P2pState?) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.WifiTethering,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Text("📶", style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.width(8.dp))
                 Text(
                     "P2P 网络",

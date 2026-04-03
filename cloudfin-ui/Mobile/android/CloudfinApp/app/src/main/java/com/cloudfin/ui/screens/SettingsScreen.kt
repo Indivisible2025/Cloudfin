@@ -29,7 +29,7 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colors.background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
@@ -37,7 +37,7 @@ fun SettingsScreen(
         Spacer(Modifier.height(16.dp))
 
         // 主题模式选择器
-        Card(backgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.95f)) {
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))) {
             Column(modifier = Modifier.padding(16.dp)) {
                 themeModes.forEach { mode ->
                     Row(
@@ -47,7 +47,7 @@ fun SettingsScreen(
                             .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Radio(
+                        RadioButton(
                             selected = themeMode == mode,
                             onClick = { onThemeChange(mode) }
                         )
@@ -75,7 +75,7 @@ fun SettingsScreen(
         Text("网络", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
 
-        Card(backgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.95f)) {
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))) {
             Column(modifier = Modifier.padding(16.dp)) {
                 SettingsRow("监听地址", "0.0.0.0:19001")
                 SettingsRow("模块目录", "./modules")
@@ -86,7 +86,7 @@ fun SettingsScreen(
         Text("关于", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
 
-        Card(backgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.95f)) {
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))) {
             Column(modifier = Modifier.padding(16.dp)) {
                 SettingsRow("Core 版本", "v0.1.0")
                 SettingsRow("UI 版本", "v0.1.0")
@@ -103,8 +103,8 @@ fun SettingsRow(label: String, value: String) {
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, style = MaterialTheme.typography.body2)
-        Text(value, style = MaterialTheme.typography.body2, color = MaterialTheme.colors.onSurfaceVariant)
+        Text(label, style = MaterialTheme.typography.bodySmall)
+        Text(value, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -113,9 +113,9 @@ fun WallpaperOptions(
     wallpaperConfig: WallpaperConfig?,
     onChange: (WallpaperConfig) -> Unit
 ) {
-    Card(backgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.95f)) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("背景图片", style = MaterialTheme.typography.body1)
+            Text("背景图片", style = MaterialTheme.typography.bodyMedium)
 
             Spacer(Modifier.height(8.dp))
 

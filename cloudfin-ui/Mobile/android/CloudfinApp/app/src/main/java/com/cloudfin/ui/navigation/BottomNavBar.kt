@@ -4,11 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.Router
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -39,24 +36,36 @@ fun BottomNavBar(
         NavigationBar(
             containerColor = Color.Transparent
         ) {
-            val tabs = listOf("状态", "模块", "网络", "同步", "设置")
-            tabs.forEachIndexed { index, title ->
-                NavigationBarItem(
-                    icon = { Icon(getTabIcon(index), contentDescription = title) },
-                    label = { Text(title) },
-                    selected = selectedTab == index,
-                    onClick = { onTabSelected(index) }
-                )
-            }
+            NavigationBarItem(
+                selected = selectedTab == 0,
+                onClick = { onTabSelected(0) },
+                icon = { Text("☁️") },
+                label = { Text("状态") }
+            )
+            NavigationBarItem(
+                selected = selectedTab == 1,
+                onClick = { onTabSelected(1) },
+                icon = { Text("📦") },
+                label = { Text("模块") }
+            )
+            NavigationBarItem(
+                selected = selectedTab == 2,
+                onClick = { onTabSelected(2) },
+                icon = { Text("📡") },
+                label = { Text("网络") }
+            )
+            NavigationBarItem(
+                selected = selectedTab == 3,
+                onClick = { onTabSelected(3) },
+                icon = { Icon(Icons.Filled.Refresh, contentDescription = "同步") },
+                label = { Text("同步") }
+            )
+            NavigationBarItem(
+                selected = selectedTab == 4,
+                onClick = { onTabSelected(4) },
+                icon = { Icon(Icons.Filled.Settings, contentDescription = "设置") },
+                label = { Text("设置") }
+            )
         }
     }
-}
-
-private fun getTabIcon(index: Int) = when (index) {
-    0 -> Icons.Default.Cloud      // 状态
-    1 -> Icons.Default.Widgets    // 模块
-    2 -> Icons.Default.Router     // 网络
-    3 -> Icons.Default.Sync       // 同步
-    4 -> Icons.Default.Settings   // 设置
-    else -> Icons.Default.Cloud
 }

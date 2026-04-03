@@ -18,8 +18,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -98,7 +98,7 @@ fun SyncScreen(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(
-                                    Icons.Default.Description,
+                                    Icons.Filled.Info,
                                     contentDescription = null,
                                     modifier = Modifier.size(48.dp),
                                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
@@ -164,7 +164,7 @@ fun SyncStatusCard(state: SyncState?) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.Sync,
+                    imageVector = Icons.Filled.Refresh,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -226,7 +226,7 @@ fun DocCard(doc: DocInfo, cardAlpha: Float, onClick: () -> Unit) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.Description,
+                    imageVector = Icons.Filled.Info,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -243,7 +243,7 @@ fun DocCard(doc: DocInfo, cardAlpha: Float, onClick: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = if (doc.syncStatus == SyncStatus.SYNCED)
-                        Icons.Default.CheckCircle else Icons.Default.Sync,
+                        Icons.Filled.CheckCircle else Icons.Filled.Refresh,
                     contentDescription = null,
                     tint = if (doc.syncStatus == SyncStatus.SYNCED)
                         Color(0xFF4CAF50) else Color(0xFFFFC107)

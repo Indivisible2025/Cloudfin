@@ -13,11 +13,10 @@ class CloudfinRepository(
     suspend fun getModules(): Result<List<ModuleInfo>> = api.getModules()
 
     suspend fun controlModule(moduleId: String, action: ModuleAction): Result<Unit> {
-        val actionStr = when (action) {
-            ModuleAction.START -> "start"
-            ModuleAction.STOP -> "stop"
-            ModuleAction.CONFIGURE -> "configure"
+        return when (action) {
+            ModuleAction.START -> api.loadModule(moduleId)
+            ModuleAction.STOP -> api.unloadModule(moduleId)
+            ModuleAction.CONFIGURE -> api.loadModule(moduleId) // configure uses load as approximation
         }
-        return api.controlModule(moduleId, actionStr)
     }
 }

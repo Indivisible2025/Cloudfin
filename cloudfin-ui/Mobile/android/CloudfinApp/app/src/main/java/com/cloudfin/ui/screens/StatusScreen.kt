@@ -54,7 +54,7 @@ fun StatusScreen(
                     Text(
                         "模块状态",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colors.onSurface
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -77,7 +77,7 @@ fun StatusScreen(
 fun StatusCard(status: CoreStatus?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        backgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.95f)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -92,7 +92,7 @@ fun StatusCard(status: CoreStatus?) {
                 Spacer(Modifier.width(8.dp))
                 Text(
                     if (status != null) "运行中" else "未连接",
-                    style = MaterialTheme.typography.h6
+                    style = MaterialTheme.typography.titleLarge
                 )
             }
             if (status != null) {
@@ -108,7 +108,7 @@ fun StatusCard(status: CoreStatus?) {
 fun ModuleStatusCard(module: ModuleInfo) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        backgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.95f)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
     ) {
         Row(
             modifier = Modifier
@@ -121,8 +121,8 @@ fun ModuleStatusCard(module: ModuleInfo) {
                 Text(getModuleEmoji(module.id), style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.width(12.dp))
                 Column {
-                    Text(module.name, style = MaterialTheme.typography.body1)
-                    Text(module.version, style = MaterialTheme.typography.caption)
+                    Text(module.name, style = MaterialTheme.typography.bodyMedium)
+                    Text(module.version, style = MaterialTheme.typography.labelSmall)
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -141,7 +141,7 @@ fun ModuleStatusCard(module: ModuleInfo) {
                         ModuleStatus.STOPPED -> "已停止"
                         ModuleStatus.ERROR -> "错误"
                     },
-                    style = MaterialTheme.typography.caption
+                    style = MaterialTheme.typography.labelSmall
                 )
             }
         }
@@ -152,7 +152,7 @@ fun ModuleStatusCard(module: ModuleInfo) {
 fun TrafficCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        backgroundColor = MaterialTheme.colors.surface.copy(alpha = 0.95f)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
     ) {
         Row(
             modifier = Modifier
@@ -161,12 +161,12 @@ fun TrafficCard() {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("↑ 0 B", style = MaterialTheme.typography.h6)
-                Text("上传", style = MaterialTheme.typography.caption)
+                Text("↑ 0 B", style = MaterialTheme.typography.titleLarge)
+                Text("上传", style = MaterialTheme.typography.labelSmall)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("↓ 0 B", style = MaterialTheme.typography.h6)
-                Text("下载", style = MaterialTheme.typography.caption)
+                Text("↓ 0 B", style = MaterialTheme.typography.titleLarge)
+                Text("下载", style = MaterialTheme.typography.labelSmall)
             }
         }
     }

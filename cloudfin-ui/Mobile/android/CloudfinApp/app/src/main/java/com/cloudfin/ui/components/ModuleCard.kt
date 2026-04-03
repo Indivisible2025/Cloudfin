@@ -23,7 +23,7 @@ fun ModuleCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        backgroundColor = MaterialTheme.colors.surface.copy(alpha = cardAlpha)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = cardAlpha))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -35,8 +35,8 @@ fun ModuleCard(
                     Text(getModuleEmoji(module.id), style = MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.width(8.dp))
                     Column {
-                        Text(module.name, style = MaterialTheme.typography.h6)
-                        Text(module.version, style = MaterialTheme.typography.caption)
+                        Text(module.name, style = MaterialTheme.typography.titleLarge)
+                        Text(module.version, style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
