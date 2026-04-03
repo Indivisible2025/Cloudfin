@@ -4,6 +4,7 @@ members = [
     "core",
     "cli",
     "plugins/common",
+    "plugins/p2p",
 ]
 
 [workspace.package]
