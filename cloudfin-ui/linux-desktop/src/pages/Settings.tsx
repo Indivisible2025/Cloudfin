@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getConfig, setConfig } from '../api/core';
 import { useTheme, THEME_ORDER, Theme } from '../contexts/ThemeContext';
+import { useGuide } from '../contexts/GuideContext';
 
 const THEME_LABELS: Record<Theme, string> = {
   system: '跟随系统',
@@ -10,6 +11,7 @@ const THEME_LABELS: Record<Theme, string> = {
 
 export default function Settings({ onShowGuide }: { onShowGuide?: () => void }) {
   const { theme, setTheme } = useTheme();
+  const { guideDismissed } = useGuide();
   const [config, setConfigState] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
@@ -119,7 +121,7 @@ export default function Settings({ onShowGuide }: { onShowGuide?: () => void }) 
         <div className="setting-row">
           <span className="setting-label">重新显示安装引导</span>
           <button className="btn-outline" onClick={onShowGuide}>
-            打开引导
+            {guideDismissed ? '打开引导' : '引导进行中'}
           </button>
         </div>
       </div>

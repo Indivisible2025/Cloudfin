@@ -7,6 +7,7 @@ import Settings from './pages/Settings';
 import { connect } from './api/core';
 import { useEffect } from 'react';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { GuideProvider, useGuide } from './contexts/GuideContext';
 import InstallGuide from './components/InstallGuide';
 
 type Page = 'status' | 'modules' | 'network' | 'sync' | 'settings';
@@ -22,24 +23,13 @@ const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
 function AppContent() {
   const [page, setPage] = useState<Page>('status');
   const [connected, setConnected] = useState(false);
-  const [guideDismissed, setGuideDismissed] = useState(
-    localStorage.getItem('installGuideDismissed') === 'true'
-  );
+  const { guideDismissed, showGuide, dismissGuide } = useGuide();
 
   useEffect(() => {
     connect()
       .then(() => setConnected(true))
       .catch(() => setConnected(false));
   }, []);
-
-  function handleGuideComplete() {
-    setGuideDismissed(true);
-  }
-
-  function handleShowGuide() {
-    localStorage.removeItem('installGuideDismissed');
-    setGuideDismissed(false);
-  }
 
   return (
     <div className="app">
@@ -74,13 +64,13 @@ function AppContent() {
 
       <main className="main-content">
         {!connected && !guideDismissed && (
-          <InstallGuide onComplete={handleGuideComplete} />
+          <InstallGuide onComplete={dismissGuide} />
         )}
         {page === 'status' && <Status />}
         {page === 'modules' && <Modules />}
         {page === 'network' && <Network />}
         {page === 'sync' && <Sync />}
-        {page === 'settings' && <Settings onShowGuide={handleShowGuide} />}
+        {page === 'settings' && <Settings onShowGuide={showGuide} />}
       </main>
     </div>
   );
@@ -89,7 +79,9 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <GuideProvider>
+        <AppContent />
+      </GuideProvider>
     </ThemeProvider>
   );
 }

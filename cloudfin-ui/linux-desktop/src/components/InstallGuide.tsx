@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { installExecute, onInstallProgress } from '../api/install';
 
 type Platform = 'linux' | 'windows' | 'macos' | 'android' | 'ios';
 type Step = 1 | 2 | 3 | 4;
@@ -61,7 +62,6 @@ export default function InstallGuide({ onComplete }: { onComplete?: () => void }
   const [progress, setProgress] = useState<ProgressInfo>({ state: 'idle', message: '' });
   const [error, setError] = useState('');
 
-  // URLs that will be used by Tauri install command
   const downloadUrls = platform ? getDownloadUrls(platform, useGitee) : null;
 
   function toggleContent(key: keyof InstallContent) {
@@ -71,30 +71,33 @@ export default function InstallGuide({ onComplete }: { onComplete?: () => void }
   async function doInstall() {
     if (!platform) return;
     setStep(3);
-    setProgress({ state: 'downloading', message: '正在下载...', progress: 0 });
     setError('');
+    setProgress({ state: 'downloading', message: '', progress: 0 });
 
-    // In production: Tauri shell command uses downloadUrls to install
-    // Simulation — URLs already computed: downloadUrls
+    const urls = getDownloadUrls(platform, useGitee);
+    const items = Object.entries({
+      core: content.core ? { name: 'core', url: urls.core, filename: urls.core.split('/').pop()! } : null,
+      p2p: content.p2p ? { name: 'p2p', url: urls.p2p, filename: urls.p2p.split('/').pop()! } : null,
+      crdt: content.crdt ? { name: 'crdt', url: urls.crdt, filename: urls.crdt.split('/').pop()! } : null,
+    }).filter(([, v]) => v !== null).map(([, v]) => v!);
+
+    const unlisten = await onInstallProgress((p) => {
+      setProgress({
+        state: p.stage as any,
+        message: p.message,
+        progress: p.percent,
+      });
+    });
+
     try {
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise(r => setTimeout(r, 150));
-        setProgress({ state: 'downloading', message: `正在下载... ${i}%`, progress: i });
-      }
-
-      setProgress({ state: 'extracting', message: '正在解压...' });
-      await new Promise(r => setTimeout(r, 500));
-
-      setProgress({ state: 'starting', message: '正在启动 Core...' });
-      await new Promise(r => setTimeout(r, 300));
-
-      setProgress({ state: 'done', message: '安装完成！' });
+      await installExecute(items);
+      unlisten();
       setStep(4);
       localStorage.setItem('installGuideDismissed', 'true');
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '安装失败';
-      setError(msg);
-      setProgress({ state: 'error', message: msg });
+    } catch (e: any) {
+      unlisten();
+      setError(e?.message || '安装失败');
+      setProgress((prev) => ({ ...prev, state: 'error' }));
     }
   }
 
