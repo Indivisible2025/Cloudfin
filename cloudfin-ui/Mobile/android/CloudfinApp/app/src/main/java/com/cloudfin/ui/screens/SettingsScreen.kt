@@ -141,7 +141,7 @@ private fun SettingsRow(label: String, value: String) {
 }
 
 fun getThemeModeLabel(mode: ThemeMode): String = when (mode) {
-    ThemeMode.DARK -> "暗色模式 🌙"
-    ThemeMode.LIGHT -> "亮色模式 ☀️"
     ThemeMode.SYSTEM -> "系统默认 📱"
+    ThemeMode.LIGHT -> "亮色模式 ☀️"
+    ThemeMode.DARK -> "暗色模式 🌙"
 }
