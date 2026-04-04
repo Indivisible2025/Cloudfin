@@ -21,15 +21,15 @@ interface InstallContent {
   crdt: boolean;
 }
 
-const VERSION = 'v2026.04.05.1';
+const VERSION = 'v2026.4.5.1';
 
 function getDownloadUrls(platform: Platform, useGitee = false) {
   const base = useGitee ? GITEE_BASE : GITHUB_BASE;
   const urls: Record<string, string> = {};
   if (platform === 'linux') {
-    urls.core = `${base}/Cloudfin_2026.4.5_amd64.deb`;
-    urls.p2p = `${base}/Cloudfin_2026.4.5_amd64.AppImage`;
-    urls.crdt = `${base}/Cloudfin_2026.4.5_amd64.AppImage`;
+    urls.core = `${base}/Cloudfin-UI-Linux-amd64-${VERSION}.tar.gz`;
+    urls.p2p = `${base}/Cloudfin-Mod-Linux-amd64-P2P-${VERSION}.zip`;
+    urls.crdt = `${base}/Cloudfin-Mod-Linux-amd64-CRDT-${VERSION}.zip`;
   } else if (platform === 'windows') {
     urls.core = `${base}/Cloudfin-Core-Windows-amd64-${VERSION}.zip`;
     urls.p2p = `${base}/Cloudfin-Mod-Windows-amd64-P2P-${VERSION}.zip`;
