@@ -58,22 +58,6 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Upload Linux x86_64 deb
-        uses: softprops/upload-gh-release-asset@v1
-        with:
-          release_url: ${{ steps.create_release.outputs.url }}
-          asset_path: cloudfin-ui/linux-desktop/src-tauri/target/release/bundle/deb/cloudfin-ui_*.deb
-          asset_name: Cloudfin-UI-Linux-x86_64-${{ steps.version.outputs.version }}.deb
-          asset_content_type: application/vnd.debian.binary-package
-
-      - name: Upload AppImage
-        uses: softprops/upload-gh-release-asset@v1
-        with:
-          release_url: ${{ steps.create_release.outputs.url }}
-          asset_path: cloudfin-ui/linux-desktop/src-tauri/target/release/bundle/appimage/cloudfin-ui_*.AppImage
-          asset_name: Cloudfin-UI-Linux-x86_64-${{ steps.version.outputs.version }}.AppImage
-          asset_content_type: application/vnd.appimage
-
       - name: Build Flatpak
         run: |
           flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || true
@@ -86,16 +70,7 @@ jobs:
           flatpak build-export /tmp/flatpak-repo \
             Cloudfin-UI-Linux-x86_64-${{ steps.version.outputs.version }}.flatpak
 
-      - name: Upload Flatpak
-        uses: softprops/upload-gh-release-asset@v1
-        with:
-          release_url: ${{ steps.create_release.outputs.url }}
-          asset_path: Cloudfin-UI-Linux-x86_64-${{ steps.version.outputs.version }}.flatpak
-          asset_name: Cloudfin-UI-Linux-x86_64-${{ steps.version.outputs.version }}.flatpak
-          asset_content_type: application/vnd.flatpak
-
-      - name: Create or update release
-        id: create_release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
@@ -105,6 +80,6 @@ jobs:
           files: |
             cloudfin-ui/linux-desktop/src-tauri/target/release/bundle/deb/*.deb
             cloudfin-ui/linux-desktop/src-tauri/target/release/bundle/appimage/*.AppImage
-            *.flatpak
+            Cloudfin-UI-Linux-x86_64-${{ steps.version.outputs.version }}.flatpak
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
