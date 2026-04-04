@@ -11,8 +11,8 @@ val Primary = Color(0xFF6C63FF)
 // 暗色模式
 val DarkBackground = Color(0xFF121212)
 val DarkSurface = Color(0xFF1E1E1E)
-val DarkOnSurface = Color(0xFFE0E0E0)
-val DarkOnSurfaceVariant = Color(0xFFB0B0B0)
+val DarkOnSurface = Color(0xFFFFFFFF)
+val DarkOnSurfaceVariant = Color(0xFFE0E0E0)
 
 // 亮色模式
 val LightBackground = Color(0xFFFAFAFA)
@@ -25,9 +25,16 @@ val Success = Color(0xFF4CAF50)
 val Warning = Color(0xFFFFC107)
 val Error = Color(0xFFF44336)
 
-// 卡片边框
-val DarkBorder = Color(0x33FFFFFF) // 20% white
-val LightBorder = Color(0x1A000000) // 10% black
+// 通用边框
+val DarkBorder = Color(0x33FFFFFF)
+val LightBorder = Color(0x1A000000)
+
+// 壁纸模式卡片
+val WallpaperCardBg = Color(0xB31E1E1E) // 70% 不透明深灰
+val WallpaperCardBorder = Color(0x33FFFFFF) // 20% 白边框
+
+// 壁纸模式标题阴影（极轻微，防亮色壁纸干扰）
+val WallpaperTitleShadowColor = Color(0x66000000) // 40% black
 
 // 暗色主题调色板
 val DarkColorPalette = darkColorScheme(

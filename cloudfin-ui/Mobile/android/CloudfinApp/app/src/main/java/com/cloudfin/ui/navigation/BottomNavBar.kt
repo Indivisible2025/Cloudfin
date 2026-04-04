@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -22,8 +21,11 @@ fun BottomNavBar(
     themeMode: ThemeMode,
     isDarkTheme: Boolean
 ) {
+    // 壁纸模式：跟随暗色（完全不透明）
+    // 暗色模式：0xFF1E1E1E
+    // 亮色模式：0xFFF5F5F5
     val navBackground = when {
-        themeMode == ThemeMode.WALLPAPER -> Color.Black.copy(alpha = 0.75f)
+        themeMode == ThemeMode.WALLPAPER -> Color(0xFF1E1E1E)
         isDarkTheme -> Color(0xFF1E1E1E)
         else -> Color(0xFFF5F5F5)
     }
@@ -57,7 +59,7 @@ fun BottomNavBar(
             NavigationBarItem(
                 selected = selectedTab == 3,
                 onClick = { onTabSelected(3) },
-                icon = { Icon(Icons.Filled.Refresh, contentDescription = "同步") },
+                icon = { Text("🔄") },
                 label = { Text("同步") }
             )
             NavigationBarItem(

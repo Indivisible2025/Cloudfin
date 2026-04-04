@@ -1,6 +1,7 @@
 package com.cloudfin.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,8 +15,24 @@ import androidx.compose.ui.unit.dp
 import com.cloudfin.model.CoreStatus
 import com.cloudfin.model.ModuleInfo
 import com.cloudfin.model.ModuleStatus
+import com.cloudfin.ui.components.cardBorder
+import com.cloudfin.ui.components.cardColors
+import com.cloudfin.ui.components.cardElevation
+import com.cloudfin.ui.components.cardShape
+import com.cloudfin.ui.components.titleTextColor
 import com.cloudfin.ui.theme.ThemeMode
 import com.cloudfin.ui.theme.WallpaperConfig
+
+// Semantic status colors
+private val StatusRunning = Color(0xFF4CAF50)
+private val StatusStopped = Color(0xFF9E9E9E)
+private val StatusError = Color(0xFFF44336)
+
+fun moduleStatusText(status: ModuleStatus): String = when(status) {
+    ModuleStatus.RUNNING -> "已连接"
+    ModuleStatus.STOPPED -> "已停止"
+    ModuleStatus.ERROR -> "错误"
+}
 
 @Composable
 fun StatusScreen(
@@ -23,14 +40,12 @@ fun StatusScreen(
     isLoading: Boolean,
     onRefresh: () -> Unit,
     themeMode: ThemeMode,
+    isWallpaperMode: Boolean = false,
     wallpaperConfig: WallpaperConfig?
 ) {
-    val rootBackground = if (themeMode == ThemeMode.WALLPAPER) Color.Transparent else MaterialTheme.colorScheme.background
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(rootBackground)
-    ) {
+    val isDarkTheme = themeMode != ThemeMode.LIGHT
+
+    Box(modifier = Modifier.fillMaxSize()) {
         if (isLoading && coreStatus == null) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else {
@@ -41,27 +56,27 @@ fun StatusScreen(
             ) {
                 // 状态卡片
                 item {
-                    StatusCard(coreStatus)
+                    StatusCard(coreStatus, isWallpaperMode, isDarkTheme)
                 }
 
-                // 模块状态列表
+                // 模块状态标题（普通文字，无卡片）
                 item {
                     Text(
                         "模块状态",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = titleTextColor(isWallpaperMode),
+                        modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
 
-                coreStatus?.modules?.forEach { module ->
-                    item {
-                        ModuleStatusCard(module)
-                    }
+                // 模块列表
+                items(coreStatus?.modules?.toList() ?: emptyList()) { module ->
+                    ModuleStatusCard(module, isWallpaperMode, isDarkTheme)
                 }
 
-                // 流量统计
+                // 流量卡片
                 item {
-                    TrafficCard()
+                    TrafficCard(isWallpaperMode, isDarkTheme)
                 }
             }
         }
@@ -69,10 +84,16 @@ fun StatusScreen(
 }
 
 @Composable
-fun StatusCard(status: CoreStatus?) {
+fun StatusCard(status: CoreStatus?, isWallpaperMode: Boolean, isDarkTheme: Boolean) {
+    val colors = cardColors(isWallpaperMode, isDarkTheme)
+    val borderColor = cardBorder(isWallpaperMode)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+        shape = cardShape,
+        colors = colors,
+        elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
+        border = if (borderColor != null) androidx.compose.foundation.BorderStroke(1.dp, borderColor) else null
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -80,7 +101,7 @@ fun StatusCard(status: CoreStatus?) {
                     modifier = Modifier
                         .size(12.dp)
                         .background(
-                            if (status != null) Color.Green else Color.Red,
+                            if (status != null) StatusRunning else StatusError,
                             CircleShape
                         )
                 )
@@ -100,10 +121,16 @@ fun StatusCard(status: CoreStatus?) {
 }
 
 @Composable
-fun ModuleStatusCard(module: ModuleInfo) {
+fun ModuleStatusCard(module: ModuleInfo, isWallpaperMode: Boolean, isDarkTheme: Boolean) {
+    val colors = cardColors(isWallpaperMode, isDarkTheme)
+    val borderColor = cardBorder(isWallpaperMode)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+        shape = cardShape,
+        colors = colors,
+        elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
+        border = if (borderColor != null) androidx.compose.foundation.BorderStroke(1.dp, borderColor) else null
     ) {
         Row(
             modifier = Modifier
@@ -125,17 +152,17 @@ fun ModuleStatusCard(module: ModuleInfo) {
                     modifier = Modifier
                         .size(8.dp)
                         .background(
-                            if (module.status == ModuleStatus.RUNNING) Color.Green else Color.Gray,
+                            when (module.status) {
+                                ModuleStatus.RUNNING -> StatusRunning
+                                ModuleStatus.STOPPED -> StatusStopped
+                                ModuleStatus.ERROR -> StatusError
+                            },
                             CircleShape
                         )
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    when (module.status) {
-                        ModuleStatus.RUNNING -> "已连接"
-                        ModuleStatus.STOPPED -> "已停止"
-                        ModuleStatus.ERROR -> "错误"
-                    },
+                    moduleStatusText(module.status),
                     style = MaterialTheme.typography.labelSmall
                 )
             }
@@ -144,10 +171,16 @@ fun ModuleStatusCard(module: ModuleInfo) {
 }
 
 @Composable
-fun TrafficCard() {
+fun TrafficCard(isWallpaperMode: Boolean, isDarkTheme: Boolean) {
+    val colors = cardColors(isWallpaperMode, isDarkTheme)
+    val borderColor = cardBorder(isWallpaperMode)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+        shape = cardShape,
+        colors = colors,
+        elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
+        border = if (borderColor != null) androidx.compose.foundation.BorderStroke(1.dp, borderColor) else null
     ) {
         Row(
             modifier = Modifier

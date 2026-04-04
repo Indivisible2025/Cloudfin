@@ -1,32 +1,15 @@
 package com.cloudfin.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +18,11 @@ import androidx.compose.ui.unit.dp
 import com.cloudfin.model.DocInfo
 import com.cloudfin.model.SyncState
 import com.cloudfin.model.SyncStatus
+import com.cloudfin.ui.components.cardBorder
+import com.cloudfin.ui.components.cardColors
+import com.cloudfin.ui.components.cardElevation
+import com.cloudfin.ui.components.cardShape
+import com.cloudfin.ui.components.titleTextColor
 import com.cloudfin.ui.theme.ThemeMode
 import com.cloudfin.ui.theme.WallpaperConfig
 
@@ -47,101 +35,57 @@ fun SyncScreen(
     onImport: () -> Unit,
     onExport: () -> Unit,
     themeMode: ThemeMode,
+    isWallpaperMode: Boolean = false,
     wallpaperConfig: WallpaperConfig?
 ) {
-    val rootBackground = if (themeMode == ThemeMode.WALLPAPER) Color.Transparent else MaterialTheme.colorScheme.background
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(rootBackground)
+    val isDarkTheme = themeMode != ThemeMode.LIGHT
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // 同步状态卡片
-            item {
-                SyncStatusCard(syncState)
-            }
+        // 同步状态卡片
+        item {
+            SyncStatusCard(syncState, isWallpaperMode, isDarkTheme)
+        }
 
-            // 文档列表标题
-            item {
-                Text(
-                    "文档列表",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
+        // 文档列表标题（普通文字，无卡片）
+        item {
+            Text(
+                "文档列表",
+                style = MaterialTheme.typography.titleMedium,
+                color = titleTextColor(isWallpaperMode),
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+        }
 
-            // 空状态
-            if (documents.isEmpty() && !isLoading) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface.copy(
-                                alpha = if (themeMode == ThemeMode.WALLPAPER) 0.95f else 1f
-                            )
-                        )
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    Icons.Filled.Info,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                Text(
-                                    "暂无同步文档",
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
-                            }
-                        }
-                    }
+        // 空状态
+        if (documents.isEmpty() && !isLoading) {
+            item {
+                SyncEmptyCard(isWallpaperMode, isDarkTheme)
+            }
+        }
+
+        // 文档卡片
+        items(documents, key = { it.id }) { doc ->
+            DocCard(doc = doc, isWallpaperMode = isWallpaperMode, isDarkTheme = isDarkTheme, onClick = { /* 打开文档 */ })
+        }
+
+        // 操作按钮（直接放，不单独成卡）
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(onClick = onCreateDoc, modifier = Modifier.weight(1f)) {
+                    Text("+ 新建文档")
                 }
-            }
-
-            // 文档卡片
-            items(documents, key = { it.id }) { doc ->
-                DocCard(
-                    doc = doc,
-                    cardAlpha = if (themeMode == ThemeMode.WALLPAPER) 0.95f else 1f,
-                    onClick = { /* 打开文档 */ }
-                )
-            }
-
-            // 操作按钮行
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = onCreateDoc,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("+ 新建文档")
-                    }
-                    OutlinedButton(
-                        onClick = onImport,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("导入")
-                    }
-                    OutlinedButton(
-                        onClick = onExport,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("导出")
-                    }
+                OutlinedButton(onClick = onImport, modifier = Modifier.weight(1f)) {
+                    Text("导入")
+                }
+                OutlinedButton(onClick = onExport, modifier = Modifier.weight(1f)) {
+                    Text("导出")
                 }
             }
         }
@@ -149,12 +93,49 @@ fun SyncScreen(
 }
 
 @Composable
-fun SyncStatusCard(state: SyncState?) {
+private fun SyncEmptyCard(isWallpaperMode: Boolean, isDarkTheme: Boolean) {
+    val colors = cardColors(isWallpaperMode, isDarkTheme)
+    val borderColor = cardBorder(isWallpaperMode)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
-        )
+        shape = cardShape,
+        colors = colors,
+        elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
+        border = if (borderColor != null) BorderStroke(1.dp, borderColor) else null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Filled.Info,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "暂无同步文档",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+    }
+}
+
+@Composable
+fun SyncStatusCard(state: SyncState?, isWallpaperMode: Boolean, isDarkTheme: Boolean) {
+    val colors = cardColors(isWallpaperMode, isDarkTheme)
+    val borderColor = cardBorder(isWallpaperMode)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = cardShape,
+        colors = colors,
+        elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
+        border = if (borderColor != null) BorderStroke(1.dp, borderColor) else null
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -164,10 +145,7 @@ fun SyncStatusCard(state: SyncState?) {
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(
-                    "同步中心",
-                    style = MaterialTheme.typography.titleLarge
-                )
+                Text("同步中心", style = MaterialTheme.typography.titleLarge)
             }
             Spacer(Modifier.height(8.dp))
             Row(
@@ -182,8 +160,7 @@ fun SyncStatusCard(state: SyncState?) {
                     )
                     Text(
                         state?.status ?: "未连接",
-                        color = if (state != null) Color(0xFF4CAF50)
-                                else MaterialTheme.colorScheme.onSurface
+                        color = if (state != null) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
@@ -203,14 +180,18 @@ fun SyncStatusCard(state: SyncState?) {
 }
 
 @Composable
-fun DocCard(doc: DocInfo, cardAlpha: Float, onClick: () -> Unit) {
+fun DocCard(doc: DocInfo, isWallpaperMode: Boolean, isDarkTheme: Boolean, onClick: () -> Unit) {
+    val colors = cardColors(isWallpaperMode, isDarkTheme)
+    val borderColor = cardBorder(isWallpaperMode)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = cardAlpha)
-        )
+        shape = cardShape,
+        colors = colors,
+        elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
+        border = if (borderColor != null) BorderStroke(1.dp, borderColor) else null
     ) {
         Row(
             modifier = Modifier
@@ -237,18 +218,15 @@ fun DocCard(doc: DocInfo, cardAlpha: Float, onClick: () -> Unit) {
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = if (doc.syncStatus == SyncStatus.SYNCED)
-                        Icons.Filled.CheckCircle else Icons.Filled.Refresh,
+                    imageVector = if (doc.syncStatus == SyncStatus.SYNCED) Icons.Filled.CheckCircle else Icons.Filled.Refresh,
                     contentDescription = null,
-                    tint = if (doc.syncStatus == SyncStatus.SYNCED)
-                        Color(0xFF4CAF50) else Color(0xFFFFC107)
+                    tint = if (doc.syncStatus == SyncStatus.SYNCED) Color(0xFF4CAF50) else Color(0xFFFFC107)
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
                     if (doc.syncStatus == SyncStatus.SYNCED) "已同步" else "同步中",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (doc.syncStatus == SyncStatus.SYNCED)
-                        Color(0xFF4CAF50) else Color(0xFFFFC107)
+                    color = if (doc.syncStatus == SyncStatus.SYNCED) Color(0xFF4CAF50) else Color(0xFFFFC107)
                 )
             }
         }

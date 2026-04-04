@@ -1,6 +1,7 @@
 package com.cloudfin.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
@@ -10,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.cloudfin.model.ModuleAction
+import com.cloudfin.ui.screens.moduleStatusText
 import com.cloudfin.model.ModuleInfo
 import com.cloudfin.model.ModuleStatus
 import com.cloudfin.ui.screens.getModuleEmoji
@@ -19,11 +21,18 @@ fun ModuleCard(
     module: ModuleInfo,
     onAction: (ModuleAction) -> Unit,
     onConfigure: () -> Unit,
-    cardAlpha: Float
+    isWallpaperMode: Boolean = false,
+    isDarkTheme: Boolean = true
 ) {
+    val colors = cardColors(isWallpaperMode, isDarkTheme)
+    val borderColor = cardBorder(isWallpaperMode)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = cardAlpha))
+        shape = cardShape,
+        colors = colors,
+        elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
+        border = if (borderColor != null) BorderStroke(1.dp, borderColor) else null
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -44,12 +53,17 @@ fun ModuleCard(
                         modifier = Modifier
                             .size(8.dp)
                             .background(
-                                if (module.status == ModuleStatus.RUNNING) Color.Green else Color.Gray,
+                                when (module.status) {
+                                    ModuleStatus.RUNNING -> Color(0xFF4CAF50)
+                                    ModuleStatus.STOPPED -> Color(0xFF9E9E9E)
+                                    ModuleStatus.ERROR -> Color(0xFFF44336)
+                                    else -> Color(0xFF9E9E9E)
+                                },
                                 CircleShape
                             )
                     )
                     Spacer(Modifier.width(4.dp))
-                    Text(module.status.name)
+                    Text(moduleStatusText(module.status))
                 }
             }
 

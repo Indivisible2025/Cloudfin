@@ -1,21 +1,24 @@
 package com.cloudfin.ui.theme
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import android.graphics.BitmapFactory
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.File
 
+/**
+ * 壁纸背景组件
+ *
+ * Layer 栈（底→顶）：
+ * 1. 壁纸图片（全屏 Crop）
+ * 2. 遮罩层（半透明黑，alpha = overlayOpacity）
+ * 3. 内容（通过 content() 传入）
+ */
 @Composable
 fun WallpaperBackground(
     wallpaperConfig: WallpaperConfig?,
@@ -26,22 +29,14 @@ fun WallpaperBackground(
         return
     }
 
-    val context = LocalContext.current
-    val file = File(wallpaperConfig.path)
-
-    // 同步加载 bitmap（文件小，加载很快）
-    val bitmap = if (file.exists()) {
-        try {
-            BitmapFactory.decodeFile(file.absolutePath)
-        } catch (e: Exception) {
-            null
-        }
-    } else {
+    val bitmap = try {
+        BitmapFactory.decodeFile(wallpaperConfig.path)
+    } catch (e: Exception) {
         null
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // 图层1: 壁纸
+        // Layer 1: 壁纸图片
         bitmap?.let {
             Image(
                 bitmap = it.asImageBitmap(),
@@ -51,14 +46,14 @@ fun WallpaperBackground(
             )
         }
 
-        // 图层2: 遮罩
+        // Layer 2: 遮罩层（关键！提供壁纸与内容之间的对比度）
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = wallpaperConfig.overlayOpacity))
         )
 
-        // 图层3: 内容
+        // Layer 3: 内容
         content()
     }
 }

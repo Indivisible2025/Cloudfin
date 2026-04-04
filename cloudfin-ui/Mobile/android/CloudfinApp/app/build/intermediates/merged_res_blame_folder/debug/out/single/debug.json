@@ -1,46 +1,10 @@
 [
     {
-        "merged": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-merged_res-49:/mipmap-mdpi_ic_launcher_round.png.flat",
-        "source": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-main-51:/mipmap-mdpi/ic_launcher_round.png"
-    },
-    {
-        "merged": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-merged_res-49:/mipmap-xhdpi_ic_launcher_round.png.flat",
-        "source": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-main-51:/mipmap-xhdpi/ic_launcher_round.png"
-    },
-    {
-        "merged": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-merged_res-49:/mipmap-xhdpi_ic_launcher.png.flat",
-        "source": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-main-51:/mipmap-xhdpi/ic_launcher.png"
-    },
-    {
-        "merged": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-merged_res-49:/mipmap-xxhdpi_ic_launcher_round.png.flat",
-        "source": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-main-51:/mipmap-xxhdpi/ic_launcher_round.png"
-    },
-    {
-        "merged": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-merged_res-49:/mipmap-hdpi_ic_launcher_round.png.flat",
-        "source": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-main-51:/mipmap-hdpi/ic_launcher_round.png"
-    },
-    {
-        "merged": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-merged_res-49:/mipmap-mdpi_ic_launcher.png.flat",
-        "source": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-main-51:/mipmap-mdpi/ic_launcher.png"
-    },
-    {
-        "merged": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-merged_res-49:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
-        "source": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-main-51:/mipmap-xxxhdpi/ic_launcher_round.png"
-    },
-    {
-        "merged": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-merged_res-49:/mipmap-xxhdpi_ic_launcher.png.flat",
-        "source": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-main-51:/mipmap-xxhdpi/ic_launcher.png"
+        "merged": "com.cloudfin.app-merged_res-49:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.cloudfin.app-main-51:/mipmap-xxxhdpi/ic_launcher.png"
     },
     {
         "merged": "com.cloudfin.app-merged_res-49:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
         "source": "com.cloudfin.app-main-51:/mipmap-xxxhdpi/ic_launcher_round.png"
-    },
-    {
-        "merged": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-merged_res-49:/mipmap-xxxhdpi_ic_launcher.png.flat",
-        "source": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-main-51:/mipmap-xxxhdpi/ic_launcher.png"
-    },
-    {
-        "merged": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-merged_res-49:/mipmap-hdpi_ic_launcher.png.flat",
-        "source": "/home/nainyv/.gradle/daemon/8.0/com.cloudfin.app-main-51:/mipmap-hdpi/ic_launcher.png"
     }
 ]
