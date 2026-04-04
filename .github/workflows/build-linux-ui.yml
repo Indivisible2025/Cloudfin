@@ -58,18 +58,6 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Build Flatpak
-        run: |
-          flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || true
-          flatpak install -y flathub org.gnome.Platform//47 org.gnome.Sdk//47 2>/dev/null || true
-          flatpak install -y flathub org.freedesktop.Sdk.Extension.rust-stable//25.08 org.freedesktop.Sdk.Extension.node22//24.08 2>/dev/null || true
-          mkdir -p /tmp/flatpak-repo
-          flatpak-builder --force-clean --repo-dir=/tmp/flatpak-repo \
-            /tmp/flatpak-build \
-            cloudfin-ui/linux-desktop/flatpak/com.cloudfin.UI.yaml
-          flatpak build-export /tmp/flatpak-repo \
-            Cloudfin-UI-Linux-x86_64-${{ steps.version.outputs.version }}.flatpak
-
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -80,6 +68,5 @@ jobs:
           files: |
             cloudfin-ui/linux-desktop/src-tauri/target/release/bundle/deb/*.deb
             cloudfin-ui/linux-desktop/src-tauri/target/release/bundle/appimage/*.AppImage
-            Cloudfin-UI-Linux-x86_64-${{ steps.version.outputs.version }}.flatpak
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
