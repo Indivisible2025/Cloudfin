@@ -23,6 +23,7 @@ import com.cloudfin.ui.theme.ThemeMode
 @Composable
 fun SettingsScreen(
     themeMode: ThemeMode,
+    isDarkTheme: Boolean,
     onThemeChange: (ThemeMode) -> Unit
 ) {
     Column(
@@ -53,7 +54,7 @@ fun SettingsScreen(
             color = titleTextColor(),
             modifier = Modifier.padding(vertical = 4.dp)
         )
-        SettingsCard {
+        SettingsCard(isDarkTheme) {
             SettingsRow("监听地址", "0.0.0.0:19001")
             SettingsRow("模块目录", "./modules")
         }
@@ -65,7 +66,7 @@ fun SettingsScreen(
             color = titleTextColor(),
             modifier = Modifier.padding(vertical = 4.dp)
         )
-        SettingsCard {
+        SettingsCard(isDarkTheme) {
             SettingsRow("Core 版本", "v0.1.0")
             SettingsRow("UI 版本", "v0.1.0")
         }
@@ -115,12 +116,13 @@ private fun ThemeModeCard(
 
 @Composable
 private fun SettingsCard(
+    isDarkTheme: Boolean,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = cardShape,
-        colors = cardColors(true),
+        colors = cardColors(isDarkTheme),
         elevation = CardDefaults.cardElevation(defaultElevation = cardElevation)
     ) {
         Column(modifier = Modifier.padding(16.dp), content = content)

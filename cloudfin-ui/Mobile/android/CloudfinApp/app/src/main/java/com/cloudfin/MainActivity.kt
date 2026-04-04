@@ -93,6 +93,7 @@ fun CloudfinApp(
                     )
                     4 -> SettingsScreen(
                         themeMode = uiState.themeMode,
+                        isDarkTheme = isDarkTheme,
                         onThemeChange = { viewModel.setThemeMode(it) }
                     )
                 }
