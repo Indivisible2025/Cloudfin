@@ -99,6 +99,43 @@ fn extract_file(src: &PathBuf, dest: &PathBuf, filename: &str) -> Result<(), Str
         let file = std::fs::File::open(src).map_err(|e| e.to_string())?;
         let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("zip 解压失败: {}", e))?;
         archive.extract(dest).map_err(|e| format!("zip 解压失败: {}", e))?;
+    } else if filename.ends_with(".deb") {
+        // Extract deb package contents to dest (dpkg-deb -x style)
+        let output = std::process::Command::new("dpkg-deb")
+            .args(["-x", src.to_str().unwrap_or_default(), dest.to_str().unwrap_or_default()])
+            .output()
+            .map_err(|e| format!("dpkg-deb 执行失败: {}", e))?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(format!("dpkg-deb 解压失败: {}", stderr));
+        }
+    } else if filename.ends_with(".AppImage") {
+        // Copy AppImage to dest and make executable
+        let appimage_name = filename.trim_end_matches(".AppImage");
+        let dest_path = dest.join(filename);
+        std::fs::copy(src, &dest_path).map_err(|e| format!("AppImage 复制失败: {}", e))?;
+        // Make executable
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&dest_path)
+                .map_err(|e| e.to_string())?
+                .permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&dest_path, perms)
+                .map_err(|e| format!("设置权限失败: {}", e))?;
+        }
+        // Create a launcher script
+        let launcher = dest.join("cloudfin-launcher.sh");
+        let launcher_content = format!("#!/bin/bash\ncd \"$(dirname \"$0\")\"\nexec \"./{}\",\n", filename);
+        std::fs::write(&launcher, launcher_content)
+            .map_err(|e| format!("创建启动器失败: {}", e))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&launcher, std::fs::Permissions::from_mode(0o755))
+                .map_err(|e| e.to_string())?;
+        }
     } else {
         return Err(format!("不支持的文件格式: {}", filename));
     }
