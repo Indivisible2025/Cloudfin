@@ -1,0 +1,5 @@
+
+# Cloudfin Android Service
+cloudfin-android-service/.gradle/
+cloudfin-android-service/app/build/
+cloudfin-android-service/local.properties
