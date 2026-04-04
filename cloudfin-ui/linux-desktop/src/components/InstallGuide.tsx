@@ -12,8 +12,8 @@ const PLATFORMS: { id: Platform; label: string; icon: string }[] = [
   { id: 'ios', label: 'iOS', icon: '📱' },
 ];
 
-const GITHUB_BASE = 'https://github.com/Indivisible2025/Cloudfin/releases/download/v2026.4.5.1';
-const GITEE_BASE = 'https://gitee.com/Nianyv/Cloudfin/releases/download/v2026-04-05-1';
+const GITHUB_BASE = 'https://github.com/Indivisible2025/Cloudfin/releases/download/v2026.04.05.1';
+const GITEE_BASE = 'https://gitee.com/Nianyv/Cloudfin/releases/download/v2026.04.05.1';
 
 interface InstallContent {
   core: boolean;
@@ -21,15 +21,15 @@ interface InstallContent {
   crdt: boolean;
 }
 
-const VERSION = 'v2026.4.5.1';
+const VERSION = 'v2026.04.05.1';
 
 function getDownloadUrls(platform: Platform, useGitee = false) {
   const base = useGitee ? GITEE_BASE : GITHUB_BASE;
   const urls: Record<string, string> = {};
   if (platform === 'linux') {
-    urls.core = `${base}/Cloudfin-Core-Linux-amd64-${VERSION}.tar.gz`;
-    urls.p2p = `${base}/Cloudfin-Mod-Linux-amd64-P2P-${VERSION}.zip`;
-    urls.crdt = `${base}/Cloudfin-Mod-Linux-amd64-CRDT-${VERSION}.zip`;
+    urls.core = `${base}/Cloudfin-Core-Linux-x86_64-${VERSION}.tar.gz`;
+    urls.p2p = `${base}/Cloudfin-Mod-Linux-x86_64-P2P-${VERSION}.zip`;
+    urls.crdt = `${base}/Cloudfin-Mod-Linux-x86_64-CRDT-${VERSION}.zip`;
   } else if (platform === 'windows') {
     urls.core = `${base}/Cloudfin-Core-Windows-amd64-${VERSION}.zip`;
     urls.p2p = `${base}/Cloudfin-Mod-Windows-amd64-P2P-${VERSION}.zip`;
