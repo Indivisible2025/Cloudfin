@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { getConfig, setConfig } from '../api/core';
+import { useTheme, THEME_ORDER, Theme } from '../contexts/ThemeContext';
 
-export default function Settings() {
+const THEME_LABELS: Record<Theme, string> = {
+  system: '跟随系统',
+  light: '亮色模式',
+  dark: '暗色模式',
+};
+
+export default function Settings({ onShowGuide }: { onShowGuide?: () => void }) {
+  const { theme, setTheme } = useTheme();
   const [config, setConfigState] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
@@ -36,6 +44,22 @@ export default function Settings() {
   return (
     <div className="page settings-page">
       <h1 className="page-title">⚙️ 设置</h1>
+
+      <div className="card">
+        <h3 className="card-title">外观</h3>
+        <div className="setting-row">
+          <span className="setting-label">主题</span>
+          <select
+            className="select"
+            value={theme}
+            onChange={(e) => setTheme(e.target.value as Theme)}
+          >
+            {THEME_ORDER.map(t => (
+              <option key={t} value={t}>{THEME_LABELS[t]}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <div className="card">
         <h3 className="card-title">监听地址</h3>
@@ -90,11 +114,21 @@ export default function Settings() {
         </div>
       </div>
 
+      <div className="card">
+        <h3 className="card-title">安装引导</h3>
+        <div className="setting-row">
+          <span className="setting-label">重新显示安装引导</span>
+          <button className="btn-outline" onClick={onShowGuide}>
+            打开引导
+          </button>
+        </div>
+      </div>
+
       <div className="card about-card">
         <h3 className="card-title">关于</h3>
         <div className="stat-row">
           <span>Cloudfin Core</span>
-          <span className="value">v2026.04.04.15.51</span>
+          <span className="value">v2026.04.05.1</span>
         </div>
         <div className="stat-row">
           <span>监听地址</span>
