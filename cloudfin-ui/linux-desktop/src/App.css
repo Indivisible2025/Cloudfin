@@ -49,10 +49,23 @@ body {
 }
 
 .logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.logo-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.logo-text {
   font-size: 18px;
   font-weight: 700;
   color: var(--accent);
-  margin-bottom: 6px;
 }
 
 .connection-badge {
@@ -433,6 +446,90 @@ body {
 .toast.success {
   background: var(--success);
   color: white;
+}
+
+/* ── Onboarding Banner ── */
+.onboarding-banner {
+  background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.onboarding-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.onboarding-banner h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.onboarding-banner > p {
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.onboarding-links {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.onboarding-btn {
+  padding: 10px 24px;
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.onboarding-btn:hover {
+  opacity: 0.85;
+}
+
+.onboarding-steps {
+  text-align: left;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-top: 8px;
+}
+
+.onboarding-steps h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 16px 0 8px;
+}
+
+.onboarding-steps h3:first-child {
+  margin-top: 0;
+}
+
+.onboarding-steps ol {
+  padding-left: 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.onboarding-steps code {
+  background: var(--bg-card);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--accent);
 }
 
 /* ── Loading ── */
