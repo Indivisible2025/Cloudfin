@@ -63,6 +63,36 @@ jobs:
           asset_name: Cloudfin-UI-Linux-x86_64-${{ github.ref_name }}.AppImage
           asset_content_type: application/vnd.appimage
 
+      - name: Build Flatpak
+        run: |
+          # Add flathub remote
+          flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || true
+          # Install runtime + SDK (idempotent)
+          flatpak install -y flathub org.gnome.Platform//47 org.gnome.Sdk//47 2>/dev/null || true
+          flatpak install -y flathub org.freedesktop.Sdk.Extension.rust-stable//25.08 org.freedesktop.Sdk.Extension.node22//24.08 2>/dev/null || true
+
+          # Init flatpak repo dir (flatpak-builder installs into it)
+          mkdir -p /tmp/flatpak-repo
+
+          # Build inside flatpak sandbox (flatpak-builder creates install layout at /run/build/cloudfin-ui)
+          flatpak-builder --force-clean --repo-dir=/tmp/flatpak-repo \
+            /tmp/flatpak-build \
+            cloudfin-ui/linux-desktop/flatpak/com.cloudfin.UI.yaml
+
+          # Export .flatpak bundle from repo
+          flatpak build-export /tmp/flatpak-repo \
+            Cloudfin-UI-Linux-x86_64-${{ github.ref_name }}.flatpak
+
+      - name: Upload Flatpak
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: Cloudfin-UI-Linux-x86_64-${{ github.ref_name }}.flatpak
+          asset_name: Cloudfin-UI-Linux-x86_64-${{ github.ref_name }}.flatpak
+          asset_content_type: application/vnd.flatpak
+
       - name: Create Release
         id: create_release
         if: github.event_name == 'workflow_dispatch'
