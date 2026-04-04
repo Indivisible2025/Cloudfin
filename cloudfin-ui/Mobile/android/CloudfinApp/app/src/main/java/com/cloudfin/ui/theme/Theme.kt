@@ -3,22 +3,14 @@ package com.cloudfin.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.graphics.Color
 
 enum class ThemeMode {
-    DARK, LIGHT, SYSTEM, WALLPAPER
+    DARK, LIGHT, SYSTEM
 }
-
-data class WallpaperConfig(
-    val path: String? = null,
-    val overlayOpacity: Float = 0.55f,
-    val blurEnabled: Boolean = false
-)
 
 @Composable
 fun CloudfinTheme(
-    themeMode: ThemeMode = ThemeMode.DARK,
-    wallpaperConfig: WallpaperConfig? = null,
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
     content: @Composable () -> Unit
 ) {
     val systemDark = isSystemInDarkTheme()
@@ -27,14 +19,12 @@ fun CloudfinTheme(
         ThemeMode.DARK -> true
         ThemeMode.LIGHT -> false
         ThemeMode.SYSTEM -> systemDark
-        ThemeMode.WALLPAPER -> true
     }
 
     val colors = if (isDark) DarkColorPalette else LightColorPalette
 
     CompositionLocalProvider(
-        LocalThemeMode provides themeMode,
-        LocalWallpaperConfig provides wallpaperConfig
+        LocalThemeMode provides themeMode
     ) {
         MaterialTheme(
             colorScheme = colors,
@@ -44,4 +34,3 @@ fun CloudfinTheme(
 }
 
 val LocalThemeMode = compositionLocalOf { ThemeMode.DARK }
-val LocalWallpaperConfig = compositionLocalOf<WallpaperConfig?> { null }

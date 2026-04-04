@@ -29,13 +29,6 @@ val Error = Color(0xFFF44336)
 val DarkBorder = Color(0x33FFFFFF)
 val LightBorder = Color(0x1A000000)
 
-// 壁纸模式卡片
-val WallpaperCardBg = Color(0xB31E1E1E) // 70% 不透明深灰
-val WallpaperCardBorder = Color(0x33FFFFFF) // 20% 白边框
-
-// 壁纸模式标题阴影（极轻微，防亮色壁纸干扰）
-val WallpaperTitleShadowColor = Color(0x66000000) // 40% black
-
 // 暗色主题调色板
 val DarkColorPalette = darkColorScheme(
     primary = Primary,

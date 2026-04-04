@@ -24,11 +24,7 @@ fun BottomNavBar(
     // 壁纸模式：跟随暗色（完全不透明）
     // 暗色模式：0xFF1E1E1E
     // 亮色模式：0xFFF5F5F5
-    val navBackground = when {
-        themeMode == ThemeMode.WALLPAPER -> Color(0xFF1E1E1E)
-        isDarkTheme -> Color(0xFF1E1E1E)
-        else -> Color(0xFFF5F5F5)
-    }
+    val navBackground = if (isDarkTheme) Color(0xFF1E1E1E) else Color(0xFFF5F5F5)
 
     Box(
         modifier = Modifier

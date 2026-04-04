@@ -24,7 +24,6 @@ import com.cloudfin.ui.components.cardElevation
 import com.cloudfin.ui.components.cardShape
 import com.cloudfin.ui.components.titleTextColor
 import com.cloudfin.ui.theme.ThemeMode
-import com.cloudfin.ui.theme.WallpaperConfig
 
 @Composable
 fun SyncScreen(
@@ -34,10 +33,7 @@ fun SyncScreen(
     onCreateDoc: () -> Unit,
     onImport: () -> Unit,
     onExport: () -> Unit,
-    themeMode: ThemeMode,
-    isWallpaperMode: Boolean = false,
-    wallpaperConfig: WallpaperConfig?
-) {
+    themeMode: ThemeMode) {
     val isDarkTheme = themeMode != ThemeMode.LIGHT
 
     LazyColumn(
@@ -47,7 +43,7 @@ fun SyncScreen(
     ) {
         // 同步状态卡片
         item {
-            SyncStatusCard(syncState, isWallpaperMode, isDarkTheme)
+            SyncStatusCard(syncState, isDarkTheme)
         }
 
         // 文档列表标题（普通文字，无卡片）
@@ -55,7 +51,7 @@ fun SyncScreen(
             Text(
                 "文档列表",
                 style = MaterialTheme.typography.titleMedium,
-                color = titleTextColor(isWallpaperMode),
+                color = titleTextColor(),
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         }
@@ -63,13 +59,13 @@ fun SyncScreen(
         // 空状态
         if (documents.isEmpty() && !isLoading) {
             item {
-                SyncEmptyCard(isWallpaperMode, isDarkTheme)
+                SyncEmptyCard(isDarkTheme)
             }
         }
 
         // 文档卡片
         items(documents, key = { it.id }) { doc ->
-            DocCard(doc = doc, isWallpaperMode = isWallpaperMode, isDarkTheme = isDarkTheme, onClick = { /* 打开文档 */ })
+            DocCard(doc = doc, isDarkTheme = isDarkTheme, onClick = { /* 打开文档 */ })
         }
 
         // 操作按钮（直接放，不单独成卡）
@@ -93,9 +89,9 @@ fun SyncScreen(
 }
 
 @Composable
-private fun SyncEmptyCard(isWallpaperMode: Boolean, isDarkTheme: Boolean) {
-    val colors = cardColors(isWallpaperMode, isDarkTheme)
-    val borderColor = cardBorder(isWallpaperMode)
+private fun SyncEmptyCard(isDarkTheme: Boolean) {
+    val colors = cardColors(isDarkTheme)
+    val borderColor = cardBorder()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -126,9 +122,9 @@ private fun SyncEmptyCard(isWallpaperMode: Boolean, isDarkTheme: Boolean) {
 }
 
 @Composable
-fun SyncStatusCard(state: SyncState?, isWallpaperMode: Boolean, isDarkTheme: Boolean) {
-    val colors = cardColors(isWallpaperMode, isDarkTheme)
-    val borderColor = cardBorder(isWallpaperMode)
+fun SyncStatusCard(state: SyncState?, isDarkTheme: Boolean) {
+    val colors = cardColors(isDarkTheme)
+    val borderColor = cardBorder()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -180,9 +176,9 @@ fun SyncStatusCard(state: SyncState?, isWallpaperMode: Boolean, isDarkTheme: Boo
 }
 
 @Composable
-fun DocCard(doc: DocInfo, isWallpaperMode: Boolean, isDarkTheme: Boolean, onClick: () -> Unit) {
-    val colors = cardColors(isWallpaperMode, isDarkTheme)
-    val borderColor = cardBorder(isWallpaperMode)
+fun DocCard(doc: DocInfo, isDarkTheme: Boolean, onClick: () -> Unit) {
+    val colors = cardColors(isDarkTheme)
+    val borderColor = cardBorder()
 
     Card(
         modifier = Modifier

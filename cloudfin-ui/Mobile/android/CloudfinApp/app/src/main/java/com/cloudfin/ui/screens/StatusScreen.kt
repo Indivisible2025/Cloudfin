@@ -21,7 +21,6 @@ import com.cloudfin.ui.components.cardElevation
 import com.cloudfin.ui.components.cardShape
 import com.cloudfin.ui.components.titleTextColor
 import com.cloudfin.ui.theme.ThemeMode
-import com.cloudfin.ui.theme.WallpaperConfig
 
 // Semantic status colors
 private val StatusRunning = Color(0xFF4CAF50)
@@ -39,10 +38,7 @@ fun StatusScreen(
     coreStatus: CoreStatus?,
     isLoading: Boolean,
     onRefresh: () -> Unit,
-    themeMode: ThemeMode,
-    isWallpaperMode: Boolean = false,
-    wallpaperConfig: WallpaperConfig?
-) {
+    themeMode: ThemeMode) {
     val isDarkTheme = themeMode != ThemeMode.LIGHT
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -56,7 +52,7 @@ fun StatusScreen(
             ) {
                 // 状态卡片
                 item {
-                    StatusCard(coreStatus, isWallpaperMode, isDarkTheme)
+                    StatusCard(coreStatus, isDarkTheme)
                 }
 
                 // 模块状态标题（普通文字，无卡片）
@@ -64,19 +60,19 @@ fun StatusScreen(
                     Text(
                         "模块状态",
                         style = MaterialTheme.typography.titleMedium,
-                        color = titleTextColor(isWallpaperMode),
+                        color = titleTextColor(),
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
 
                 // 模块列表
                 items(coreStatus?.modules?.toList() ?: emptyList()) { module ->
-                    ModuleStatusCard(module, isWallpaperMode, isDarkTheme)
+                    ModuleStatusCard(module, isDarkTheme)
                 }
 
                 // 流量卡片
                 item {
-                    TrafficCard(isWallpaperMode, isDarkTheme)
+                    TrafficCard(isDarkTheme)
                 }
             }
         }
@@ -84,9 +80,9 @@ fun StatusScreen(
 }
 
 @Composable
-fun StatusCard(status: CoreStatus?, isWallpaperMode: Boolean, isDarkTheme: Boolean) {
-    val colors = cardColors(isWallpaperMode, isDarkTheme)
-    val borderColor = cardBorder(isWallpaperMode)
+fun StatusCard(status: CoreStatus?, isDarkTheme: Boolean) {
+    val colors = cardColors(isDarkTheme)
+    val borderColor = cardBorder()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -121,9 +117,9 @@ fun StatusCard(status: CoreStatus?, isWallpaperMode: Boolean, isDarkTheme: Boole
 }
 
 @Composable
-fun ModuleStatusCard(module: ModuleInfo, isWallpaperMode: Boolean, isDarkTheme: Boolean) {
-    val colors = cardColors(isWallpaperMode, isDarkTheme)
-    val borderColor = cardBorder(isWallpaperMode)
+fun ModuleStatusCard(module: ModuleInfo, isDarkTheme: Boolean) {
+    val colors = cardColors(isDarkTheme)
+    val borderColor = cardBorder()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -171,9 +167,9 @@ fun ModuleStatusCard(module: ModuleInfo, isWallpaperMode: Boolean, isDarkTheme: 
 }
 
 @Composable
-fun TrafficCard(isWallpaperMode: Boolean, isDarkTheme: Boolean) {
-    val colors = cardColors(isWallpaperMode, isDarkTheme)
-    val borderColor = cardBorder(isWallpaperMode)
+fun TrafficCard(isDarkTheme: Boolean) {
+    val colors = cardColors(isDarkTheme)
+    val borderColor = cardBorder()
 
     Card(
         modifier = Modifier.fillMaxWidth(),

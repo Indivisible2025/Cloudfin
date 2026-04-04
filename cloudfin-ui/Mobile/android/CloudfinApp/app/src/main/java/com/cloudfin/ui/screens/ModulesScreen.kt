@@ -12,17 +12,13 @@ import com.cloudfin.model.ModuleInfo
 import com.cloudfin.ui.components.ModuleCard
 import com.cloudfin.ui.components.titleTextColor
 import com.cloudfin.ui.theme.ThemeMode
-import com.cloudfin.ui.theme.WallpaperConfig
 
 @Composable
 fun ModulesScreen(
     modules: List<ModuleInfo>,
     onModuleAction: (String, ModuleAction) -> Unit,
     onConfigure: (String) -> Unit,
-    themeMode: ThemeMode,
-    isWallpaperMode: Boolean = false,
-    wallpaperConfig: WallpaperConfig?
-) {
+    themeMode: ThemeMode) {
     val isDarkTheme = themeMode != ThemeMode.LIGHT
 
     LazyColumn(
@@ -35,7 +31,7 @@ fun ModulesScreen(
             Text(
                 "已安装 ${modules.size} 个模块",
                 style = MaterialTheme.typography.titleMedium,
-                color = titleTextColor(isWallpaperMode),
+                color = titleTextColor(),
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         }
@@ -45,7 +41,6 @@ fun ModulesScreen(
                 module = module,
                 onAction = { action -> onModuleAction(module.id, action) },
                 onConfigure = { onConfigure(module.id) },
-                isWallpaperMode = isWallpaperMode,
                 isDarkTheme = isDarkTheme
             )
         }

@@ -21,11 +21,10 @@ fun ModuleCard(
     module: ModuleInfo,
     onAction: (ModuleAction) -> Unit,
     onConfigure: () -> Unit,
-    isWallpaperMode: Boolean = false,
     isDarkTheme: Boolean = true
 ) {
-    val colors = cardColors(isWallpaperMode, isDarkTheme)
-    val borderColor = cardBorder(isWallpaperMode)
+    val colors = cardColors(isDarkTheme)
+    val borderColor = cardBorder()
 
     Card(
         modifier = Modifier.fillMaxWidth(),

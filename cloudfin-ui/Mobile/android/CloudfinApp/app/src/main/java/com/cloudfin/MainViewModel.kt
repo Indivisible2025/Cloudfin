@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.cloudfin.data.repository.CloudfinRepository
 import com.cloudfin.model.*
 import com.cloudfin.ui.theme.ThemeMode
-import com.cloudfin.ui.theme.WallpaperConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,10 +19,7 @@ data class MainUiState(
     val peers: List<NetworkPeer> = emptyList(),
     val docs: List<SyncDoc> = emptyList(),
     val isLoading: Boolean = false,
-    val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val wallpaperConfig: WallpaperConfig? = null,
-    // WALLPAPER 模式继承切换前的亮/暗模式
-    val previousThemeMode: ThemeMode = ThemeMode.SYSTEM
+    val themeMode: ThemeMode = ThemeMode.SYSTEM
 )
 
 class MainViewModel(
@@ -44,7 +40,7 @@ class MainViewModel(
     fun refreshStatus() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            
+
             repository.getCoreStatus().onSuccess { status ->
                 _uiState.update { it.copy(coreStatus = status, isLoading = false) }
             }.onFailure {
@@ -93,26 +89,7 @@ class MainViewModel(
     }
 
     fun setThemeMode(mode: ThemeMode) {
-        _uiState.update { current ->
-            when {
-                // 切换到 WALLPAPER：保存当前模式
-                mode == ThemeMode.WALLPAPER -> current.copy(
-                    themeMode = mode,
-                    previousThemeMode = current.themeMode
-                )
-                // 从 WALLPAPER 切走：恢复之前保存的模式
-                current.themeMode == ThemeMode.WALLPAPER -> current.copy(
-                    themeMode = mode,
-                    previousThemeMode = current.previousThemeMode
-                )
-                // 普通模式切换
-                else -> current.copy(themeMode = mode)
-            }
-        }
-    }
-
-    fun setWallpaperConfig(config: WallpaperConfig?) {
-        _uiState.update { it.copy(wallpaperConfig = config) }
+        _uiState.update { it.copy(themeMode = mode) }
     }
 }
 

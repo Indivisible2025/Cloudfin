@@ -21,7 +21,6 @@ import com.cloudfin.ui.components.cardElevation
 import com.cloudfin.ui.components.cardShape
 import com.cloudfin.ui.components.titleTextColor
 import com.cloudfin.ui.theme.ThemeMode
-import com.cloudfin.ui.theme.WallpaperConfig
 
 @Composable
 fun NetworkScreen(
@@ -30,10 +29,7 @@ fun NetworkScreen(
     isLoading: Boolean,
     onAddPeer: () -> Unit,
     onRefresh: () -> Unit,
-    themeMode: ThemeMode,
-    isWallpaperMode: Boolean = false,
-    wallpaperConfig: WallpaperConfig?
-) {
+    themeMode: ThemeMode) {
     val isDarkTheme = themeMode != ThemeMode.LIGHT
 
     LazyColumn(
@@ -43,7 +39,7 @@ fun NetworkScreen(
     ) {
         // P2P 状态卡片
         item {
-            P2pStatusCard(p2pState, isWallpaperMode, isDarkTheme)
+            P2pStatusCard(p2pState, isDarkTheme)
         }
 
         // 节点列表标题（普通文字，无卡片）
@@ -51,7 +47,7 @@ fun NetworkScreen(
             Text(
                 "节点列表",
                 style = MaterialTheme.typography.titleMedium,
-                color = titleTextColor(isWallpaperMode),
+                color = titleTextColor(),
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         }
@@ -59,13 +55,13 @@ fun NetworkScreen(
         // 空状态
         if (peers.isEmpty() && !isLoading) {
             item {
-                EmptyPeerCard("暂无连接节点", isWallpaperMode, isDarkTheme)
+                EmptyPeerCard("暂无连接节点", isDarkTheme)
             }
         }
 
         // 节点卡片
         items(peers, key = { it.id }) { peer ->
-            PeerCard(peer = peer, isWallpaperMode = isWallpaperMode, isDarkTheme = isDarkTheme)
+            PeerCard(peer = peer, isDarkTheme = isDarkTheme)
         }
 
         // 操作按钮（直接放，不单独成卡）
@@ -88,9 +84,9 @@ fun NetworkScreen(
 }
 
 @Composable
-private fun EmptyPeerCard(message: String, isWallpaperMode: Boolean, isDarkTheme: Boolean) {
-    val colors = cardColors(isWallpaperMode, isDarkTheme)
-    val borderColor = cardBorder(isWallpaperMode)
+private fun EmptyPeerCard(message: String, isDarkTheme: Boolean) {
+    val colors = cardColors(isDarkTheme)
+    val borderColor = cardBorder()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -111,9 +107,9 @@ private fun EmptyPeerCard(message: String, isWallpaperMode: Boolean, isDarkTheme
 }
 
 @Composable
-fun P2pStatusCard(state: P2pState?, isWallpaperMode: Boolean, isDarkTheme: Boolean) {
-    val colors = cardColors(isWallpaperMode, isDarkTheme)
-    val borderColor = cardBorder(isWallpaperMode)
+fun P2pStatusCard(state: P2pState?, isDarkTheme: Boolean) {
+    val colors = cardColors(isDarkTheme)
+    val borderColor = cardBorder()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -161,9 +157,9 @@ fun P2pStatusCard(state: P2pState?, isWallpaperMode: Boolean, isDarkTheme: Boole
 }
 
 @Composable
-fun PeerCard(peer: PeerInfo, isWallpaperMode: Boolean, isDarkTheme: Boolean) {
-    val colors = cardColors(isWallpaperMode, isDarkTheme)
-    val borderColor = cardBorder(isWallpaperMode)
+fun PeerCard(peer: PeerInfo, isDarkTheme: Boolean) {
+    val colors = cardColors(isDarkTheme)
+    val borderColor = cardBorder()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
