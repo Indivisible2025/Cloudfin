@@ -5,6 +5,8 @@ description = "Cloudfin Desktop UI"
 authors = ["Cloudfin Team"]
 edition = "2021"
 
+[workspace]
+
 [lib]
 name = "cloudfin_ui_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
