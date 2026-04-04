@@ -2,9 +2,29 @@
 
 use std::path::PathBuf;
 use anyhow::Context;
+use serde::{Deserialize, Serialize};
 
-use crate::Config;
+/// Cloudfin daemon configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Config {
+    pub version: String,
+    pub modules_dir: String,
+    pub http_port: u16,
+    pub ws_port: u16,
+}
 
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            version: "0.1.0".into(),
+            modules_dir: "./modules".into(),
+            http_port: 19001,
+            ws_port: 19001,
+        }
+    }
+}
+
+/// Configuration manager - load/save config from disk
 pub struct ConfigManager {
     config_path: PathBuf,
 }
@@ -16,7 +36,6 @@ impl ConfigManager {
         }
     }
 
-    /// Load config from disk
     pub fn load(&self) -> anyhow::Result<Config> {
         if !self.config_path.exists() {
             return Ok(Config::default());
@@ -28,7 +47,6 @@ impl ConfigManager {
         Ok(config)
     }
 
-    /// Save config to disk
     pub fn save(&self, config: &Config) -> anyhow::Result<()> {
         if let Some(parent) = self.config_path.parent() {
             std::fs::create_dir_all(parent)
