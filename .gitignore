@@ -2,7 +2,6 @@
 target/
 cloudfin-ui/linux-desktop/src-tauri/target/
 cloudfin-ui/linux-desktop/src-tauri/Cargo.lock
-cloudfin-ui/linux-desktop/package-lock.json
 
 # Android
 cloudfin-android-service/.gradle/
