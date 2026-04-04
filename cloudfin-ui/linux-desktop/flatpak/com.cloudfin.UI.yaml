@@ -1,0 +1,40 @@
+app-id: com.cloudfin.UI
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+  - org.freedesktop.Sdk.Extension.node22
+command: cloudfin-ui
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=network
+  - --device=dri
+  - --talk-name=org.freedesktop.Notifications
+  - --filesystem=home:ro
+  - --talk-name=org.freedesktop.secrets
+  - --env=RUST_BACKTRACE=1
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/node22/bin
+  env:
+    CARGO_HOME: /run/build/cloudfin-ui/cargo
+    npm_config_nodedir: /usr/lib/sdk/node22
+modules:
+  - name: webkit2gtk
+    buildsystem: simple
+    build-commands:
+      - echo "WebKit provided by runtime"
+  - name: cloudfin-ui
+    buildsystem: simple
+    build-commands:
+      - |
+        npm ci
+        npm run tauri build -- --bundles deb
+        install -Dm755 src-tauri/target/release/cloudfin-ui /run/build/cloudfin-ui/com.cloudfin.UI
+        install -Dm644 src-tauri/icons/128x128.png /run/build/cloudfin-ui/share/icons/hicolor/128x128/apps/com.cloudfin.UI.png
+        install -Dm644 flatpak/com.cloudfin.UI.desktop /run/build/cloudfin-ui/share/applications/com.cloudfin.UI.desktop
+    sources:
+      - type: dir
+        path: .

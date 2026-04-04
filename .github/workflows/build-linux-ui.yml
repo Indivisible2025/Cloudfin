@@ -1,0 +1,76 @@
+name: Build Cloudfin UI (Linux)
+
+on:
+  push:
+    tags:
+      - "ui-*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            patchelf
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        working-directory: cloudfin-ui/linux-desktop
+        run: npm ci
+
+      - name: Build Tauri app
+        working-directory: cloudfin-ui/linux-desktop
+        run: npm run tauri build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux x86_64 deb
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: cloudfin-ui/linux-desktop/src-tauri/target/release/bundle/deb/cloudfin-ui_*.deb
+          asset_name: Cloudfin-UI-Linux-x86_64-${{ github.ref_name }}.deb
+          asset_content_type: application/vnd.debian.binary-package
+
+      - name: Upload AppImage
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: cloudfin-ui/linux-desktop/src-tauri/target/release/bundle/appimage/cloudfin-ui_*.AppImage
+          asset_name: Cloudfin-UI-Linux-x86_64-${{ github.ref_name }}.AppImage
+          asset_content_type: application/vnd.appimage
+
+      - name: Create Release
+        id: create_release
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/create-release@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Cloudfin UI Linux ${{ github.ref_name }}
+          draft: true
+          prerelease: false
