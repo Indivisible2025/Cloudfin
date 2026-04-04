@@ -2,23 +2,19 @@
 //! 基于 libp2p 的 P2P 网络模块
 
 pub mod behaviour;
-pub mod network;
 pub mod discovery;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
+use cloudfin_plugin_common::{Module, ModuleHealth};
 
 /// P2P 模块配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct P2pConfig {
-    /// 监听地址，例如 "/ip4/0.0.0.0/tcp/0"
     pub listen_addr: String,
-    /// Bootstrap 节点列表
     pub bootstrap_nodes: Vec<String>,
-    /// 是否启用 mDNS 发现
     pub enable_mdns: bool,
-    /// Kademlia 宇宙桶大小
     pub kbucket_size: usize,
 }
 
@@ -48,9 +44,9 @@ pub struct P2pModule {
 }
 
 impl P2pModule {
-    pub fn new(config: P2pConfig) -> Self {
+    pub fn new() -> Self {
         Self {
-            config,
+            config: P2pConfig::default(),
             state: RwLock::new(P2pState {
                 connected_peers: 0,
                 discovered_peers: 0,
@@ -58,41 +54,63 @@ impl P2pModule {
             }),
         }
     }
+}
 
-    /// 模块初始化
-    pub async fn init(&mut self) -> Result<()> {
-        tracing::info!("Initializing P2P module...");
+impl Default for P2pModule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Module for P2pModule {
+    fn id(&self) -> &str {
+        "cloudfin.p2p"
+    }
+
+    fn name(&self) -> &str {
+        "P2P Networking"
+    }
+
+    fn version(&self) -> &str {
+        "0.1.0"
+    }
+
+    fn init(&mut self, config: serde_json::Value) -> anyhow::Result<()> {
+        if let Some(obj) = config.as_object() {
+            if let Some(addr) = obj.get("listen_addr").and_then(|v| v.as_str()) {
+                self.config.listen_addr = addr.to_string();
+            }
+            if let Some(nodes) = obj.get("bootstrap_nodes").and_then(|v| v.as_array()) {
+                self.config.bootstrap_nodes = nodes.iter().filter_map(|v| v.as_str().map(String::from)).collect();
+            }
+            if let Some(enable) = obj.get("enable_mdns").and_then(|v| v.as_bool()) {
+                self.config.enable_mdns = enable;
+            }
+        }
+        tracing::info!("P2P module initialized");
         Ok(())
     }
 
-    /// 启动 P2P 网络
-    pub async fn start(&mut self) -> Result<()> {
-        tracing::info!("Starting P2P module...");
-        let mut state = self.state.write().await;
-        state.listening_addr = self.config.listen_addr.clone();
+    fn start(&mut self) -> anyhow::Result<()> {
+        tracing::info!("P2P module started on {}", self.config.listen_addr);
         Ok(())
     }
 
-    /// 停止模块
-    pub async fn stop(&mut self) -> Result<()> {
-        tracing::info!("Stopping P2P module...");
+    fn stop(&mut self) -> anyhow::Result<()> {
+        tracing::info!("P2P module stopped");
         Ok(())
     }
 
-    /// 获取状态
-    pub async fn status(&self) -> P2pState {
-        self.state.read().await.clone()
+    fn status(&self) -> ModuleHealth {
+        ModuleHealth {
+            running: true,
+            message: "P2P module running".into(),
+        }
     }
+}
 
-    /// 连接指定节点
-    pub async fn dial(&mut self, addr: &str) -> Result<()> {
-        tracing::info!("Dialing: {}", addr);
-        Ok(())
-    }
-
-    /// 广播消息到所有连接节点
-    pub async fn broadcast(&mut self, msg: &[u8]) -> Result<()> {
-        tracing::debug!("Broadcasting {} bytes", msg.len());
-        Ok(())
-    }
+/// Factory function — must be #[no_mangle] for libloading
+#[no_mangle]
+pub extern "C" fn create_module() -> *mut Box<dyn Module> {
+    Box::into_raw(Box::new(Box::new(P2pModule::new()) as Box<dyn Module>))
 }

@@ -5,20 +5,16 @@ pub mod document;
 pub mod sync;
 pub mod state;
 
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
+use cloudfin_plugin_common::{Module, ModuleHealth};
 
 /// CRDT 配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CrdtConfig {
-    /// 文档名称
     pub doc_name: String,
-    /// 同步服务地址
     pub sync_addr: Option<String>,
-    /// 持久化路径
     pub persistence_path: Option<String>,
-    /// 最大文档数
     pub max_docs: usize,
 }
 
@@ -42,16 +38,15 @@ pub struct CrdtState {
 }
 
 /// Cloudfin CRDT 模块
-#[allow(dead_code)]
 pub struct CrdtModule {
     config: CrdtConfig,
     state: RwLock<CrdtState>,
 }
 
 impl CrdtModule {
-    pub fn new(config: CrdtConfig) -> Self {
+    pub fn new() -> Self {
         Self {
-            config,
+            config: CrdtConfig::default(),
             state: RwLock::new(CrdtState {
                 active_docs: 0,
                 pending_updates: 0,
@@ -59,41 +54,63 @@ impl CrdtModule {
             }),
         }
     }
+}
 
-    pub async fn init(&mut self) -> Result<()> {
-        tracing::info!("Initializing CRDT module...");
+impl Default for CrdtModule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Module for CrdtModule {
+    fn id(&self) -> &str {
+        "cloudfin.crdt"
+    }
+
+    fn name(&self) -> &str {
+        "CRDT Sync"
+    }
+
+    fn version(&self) -> &str {
+        "0.1.0"
+    }
+
+    fn init(&mut self, config: serde_json::Value) -> anyhow::Result<()> {
+        if let Some(obj) = config.as_object() {
+            if let Some(name) = obj.get("doc_name").and_then(|v| v.as_str()) {
+                self.config.doc_name = name.to_string();
+            }
+            if let Some(addr) = obj.get("sync_addr").and_then(|v| v.as_str()) {
+                self.config.sync_addr = Some(addr.to_string());
+            }
+            if let Some(path) = obj.get("persistence_path").and_then(|v| v.as_str()) {
+                self.config.persistence_path = Some(path.to_string());
+            }
+        }
+        tracing::info!("CRDT module initialized");
         Ok(())
     }
 
-    pub async fn start(&mut self) -> Result<()> {
-        tracing::info!("Starting CRDT module...");
+    fn start(&mut self) -> anyhow::Result<()> {
+        tracing::info!("CRDT module started");
         Ok(())
     }
 
-    pub async fn stop(&mut self) -> Result<()> {
-        tracing::info!("Stopping CRDT module...");
+    fn stop(&mut self) -> anyhow::Result<()> {
+        tracing::info!("CRDT module stopped");
         Ok(())
     }
 
-    pub async fn status(&self) -> CrdtState {
-        self.state.read().await.clone()
+    fn status(&self) -> ModuleHealth {
+        ModuleHealth {
+            running: true,
+            message: "CRDT module running".into(),
+        }
     }
+}
 
-    /// 创建一个新文档
-    pub async fn create_doc(&self, name: &str) -> Result<Vec<u8>> {
-        tracing::info!("Creating CRDT document: {}", name);
-        // 返回文档初始状态
-        Ok(vec![])
-    }
-
-    /// 应用更新
-    pub async fn apply_update(&self, doc_name: &str, update: &[u8]) -> Result<()> {
-        tracing::debug!("Applying update to {} ({} bytes)", doc_name, update.len());
-        Ok(())
-    }
-
-    /// 获取文档状态
-    pub async fn get_state(&self, _doc_name: &str) -> Result<Vec<u8>> {
-        Ok(vec![])
-    }
+/// Factory function — must be #[no_mangle] for libloading
+#[no_mangle]
+pub extern "C" fn create_module() -> *mut Box<dyn Module> {
+    Box::into_raw(Box::new(Box::new(CrdtModule::new()) as Box<dyn Module>))
 }
