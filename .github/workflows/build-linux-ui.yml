@@ -65,6 +65,7 @@ jobs:
           name: Cloudfin UI Linux ${{ steps.version.outputs.tag }}
           draft: true
           prerelease: false
+          replace: true
           files: |
             cloudfin-ui/linux-desktop/src-tauri/target/release/bundle/deb/*.deb
             cloudfin-ui/linux-desktop/src-tauri/target/release/bundle/appimage/*.AppImage
