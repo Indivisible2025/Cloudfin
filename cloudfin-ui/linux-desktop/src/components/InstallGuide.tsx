@@ -27,9 +27,9 @@ function getDownloadUrls(platform: Platform, useGitee = false) {
   const base = useGitee ? GITEE_BASE : GITHUB_BASE;
   const urls: Record<string, string> = {};
   if (platform === 'linux') {
-    urls.core = `${base}/Cloudfin-UI-Linux-amd64-${VERSION}.tar.gz`;
-    urls.p2p = `${base}/Cloudfin-Mod-Linux-amd64-P2P-${VERSION}.zip`;
-    urls.crdt = `${base}/Cloudfin-Mod-Linux-amd64-CRDT-${VERSION}.zip`;
+    urls.core = `${base}/Cloudfin_2026.4.5_amd64.deb`;
+    urls.p2p = `${base}/Cloudfin_2026.4.5_amd64.AppImage`;
+    urls.crdt = `${base}/Cloudfin_2026.4.5_amd64.AppImage`;
   } else if (platform === 'windows') {
     urls.core = `${base}/Cloudfin-Core-Windows-amd64-${VERSION}.zip`;
     urls.p2p = `${base}/Cloudfin-Mod-Windows-amd64-P2P-${VERSION}.zip`;
