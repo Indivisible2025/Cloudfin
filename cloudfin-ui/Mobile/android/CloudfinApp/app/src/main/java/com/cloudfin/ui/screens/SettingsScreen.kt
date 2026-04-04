@@ -79,7 +79,7 @@ private fun ThemeModeCard(
 ) {
     val isDark = selectedThemeMode != ThemeMode.LIGHT
     val colors = cardColors(isDark)
-    val borderColor = cardBorder()
+    val borderColor = cardBorder(isDark)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -89,7 +89,7 @@ private fun ThemeModeCard(
         border = if (borderColor != null) BorderStroke(1.dp, borderColor) else null
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
-            ThemeMode.entries.forEach { mode ->
+            listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK).forEach { mode ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

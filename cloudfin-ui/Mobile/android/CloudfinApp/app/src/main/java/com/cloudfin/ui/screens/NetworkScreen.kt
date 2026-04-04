@@ -86,7 +86,7 @@ fun NetworkScreen(
 @Composable
 private fun EmptyPeerCard(message: String, isDarkTheme: Boolean) {
     val colors = cardColors(isDarkTheme)
-    val borderColor = cardBorder()
+    val borderColor = cardBorder(isDarkTheme)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -109,7 +109,7 @@ private fun EmptyPeerCard(message: String, isDarkTheme: Boolean) {
 @Composable
 fun P2pStatusCard(state: P2pState?, isDarkTheme: Boolean) {
     val colors = cardColors(isDarkTheme)
-    val borderColor = cardBorder()
+    val borderColor = cardBorder(isDarkTheme)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -159,7 +159,7 @@ fun P2pStatusCard(state: P2pState?, isDarkTheme: Boolean) {
 @Composable
 fun PeerCard(peer: PeerInfo, isDarkTheme: Boolean) {
     val colors = cardColors(isDarkTheme)
-    val borderColor = cardBorder()
+    val borderColor = cardBorder(isDarkTheme)
 
     Card(
         modifier = Modifier.fillMaxWidth(),

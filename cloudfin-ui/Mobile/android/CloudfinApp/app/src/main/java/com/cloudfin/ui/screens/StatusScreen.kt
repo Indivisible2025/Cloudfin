@@ -82,7 +82,7 @@ fun StatusScreen(
 @Composable
 fun StatusCard(status: CoreStatus?, isDarkTheme: Boolean) {
     val colors = cardColors(isDarkTheme)
-    val borderColor = cardBorder()
+    val borderColor = cardBorder(isDarkTheme)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -119,7 +119,7 @@ fun StatusCard(status: CoreStatus?, isDarkTheme: Boolean) {
 @Composable
 fun ModuleStatusCard(module: ModuleInfo, isDarkTheme: Boolean) {
     val colors = cardColors(isDarkTheme)
-    val borderColor = cardBorder()
+    val borderColor = cardBorder(isDarkTheme)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -169,7 +169,7 @@ fun ModuleStatusCard(module: ModuleInfo, isDarkTheme: Boolean) {
 @Composable
 fun TrafficCard(isDarkTheme: Boolean) {
     val colors = cardColors(isDarkTheme)
-    val borderColor = cardBorder()
+    val borderColor = cardBorder(isDarkTheme)
 
     Card(
         modifier = Modifier.fillMaxWidth(),

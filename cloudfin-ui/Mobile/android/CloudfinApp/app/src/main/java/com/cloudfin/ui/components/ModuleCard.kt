@@ -24,7 +24,7 @@ fun ModuleCard(
     isDarkTheme: Boolean = true
 ) {
     val colors = cardColors(isDarkTheme)
-    val borderColor = cardBorder()
+    val borderColor = cardBorder(isDarkTheme)
 
     Card(
         modifier = Modifier.fillMaxWidth(),

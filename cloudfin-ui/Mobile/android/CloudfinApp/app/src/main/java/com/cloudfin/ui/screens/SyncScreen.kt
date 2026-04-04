@@ -91,7 +91,7 @@ fun SyncScreen(
 @Composable
 private fun SyncEmptyCard(isDarkTheme: Boolean) {
     val colors = cardColors(isDarkTheme)
-    val borderColor = cardBorder()
+    val borderColor = cardBorder(isDarkTheme)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -124,7 +124,7 @@ private fun SyncEmptyCard(isDarkTheme: Boolean) {
 @Composable
 fun SyncStatusCard(state: SyncState?, isDarkTheme: Boolean) {
     val colors = cardColors(isDarkTheme)
-    val borderColor = cardBorder()
+    val borderColor = cardBorder(isDarkTheme)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -178,7 +178,7 @@ fun SyncStatusCard(state: SyncState?, isDarkTheme: Boolean) {
 @Composable
 fun DocCard(doc: DocInfo, isDarkTheme: Boolean, onClick: () -> Unit) {
     val colors = cardColors(isDarkTheme)
-    val borderColor = cardBorder()
+    val borderColor = cardBorder(isDarkTheme)
 
     Card(
         modifier = Modifier

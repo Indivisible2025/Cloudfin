@@ -21,7 +21,10 @@ fun cardColors(isDarkTheme: Boolean): CardColors {
     )
 }
 
-fun cardBorder(): androidx.compose.ui.graphics.Color? = null
+private val LightBorder = androidx.compose.ui.graphics.Color(0x1A000000)
+private val DarkBorder = androidx.compose.ui.graphics.Color(0x33FFFFFF)
+
+fun cardBorder(isDark: Boolean): androidx.compose.ui.graphics.Color? = if (isDark) DarkBorder else LightBorder
 
 @Composable
 fun titleTextColor(): androidx.compose.ui.graphics.Color {
