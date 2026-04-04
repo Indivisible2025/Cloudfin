@@ -1,5 +1,23 @@
+# Build artifacts
+target/
+cloudfin-ui/linux-desktop/src-tauri/target/
+cloudfin-ui/linux-desktop/src-tauri/Cargo.lock
+cloudfin-ui/linux-desktop/package-lock.json
 
-# Cloudfin Android Service
+# Android
 cloudfin-android-service/.gradle/
 cloudfin-android-service/app/build/
 cloudfin-android-service/local.properties
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flatpak build
+.flathub/

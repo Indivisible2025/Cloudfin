@@ -34,4 +34,14 @@ pub trait Module: Send + Sync {
 
     /// Current health status
     fn status(&self) -> ModuleHealth;
+
+    /// Cards data for UI display (info, actions, settings)
+    /// Default returns empty cards structure.
+    fn cards(&self) -> Value {
+        serde_json::json!({
+            "info": [],
+            "actions": [],
+            "settings": []
+        })
+    }
 }

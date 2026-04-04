@@ -5,10 +5,10 @@ use std::sync::Arc;
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        Path, State,
+        State,
     },
     routing,
-    Json, Router,
+    Router,
 };
 use chrono::{DateTime, Utc};
 use futures::{sink::SinkExt, stream::StreamExt};
@@ -19,7 +19,7 @@ use parking_lot::Mutex;
 use tower_http::trace::TraceLayer;
 use uuid::Uuid;
 
-use cloudfin_core::{Module, PluginManager};
+use cloudfin_core::PluginManager;
 
 // === Shared Types ===
 
@@ -59,9 +59,10 @@ struct AppCtx {
 
 #[derive(Clone, Debug)]
 enum WsMessage {
-    Response { request_id: String, data: serde_json::Value },
-    StatusUpdate(serde_json::Value),
-    ModuleChanged { id: String, status: String },
+    Response { id: serde_json::Value, result: serde_json::Value },
+    Notification { method: String, params: serde_json::Value },
+    ModuleAdded(serde_json::Value),
+    ModuleRemoved(String),
 }
 
 // === WebSocket ===
@@ -80,8 +81,9 @@ async fn ws_socket_handler(socket: WebSocket, ctx: AppCtx) {
 
     let status = build_status_json(&ctx.inner).await;
     let init_msg = serde_json::to_string(&json!({
-        "type": "status_update",
-        "data": status
+        "jsonrpc": "2.0",
+        "method": "status_update",
+        "params": status
     })).unwrap();
     let _ = sender.send(Message::Text(init_msg)).await;
 
@@ -89,26 +91,35 @@ async fn ws_socket_handler(socket: WebSocket, ctx: AppCtx) {
         tokio::select! {
             msg = broadcast_rx.recv() => {
                 match msg {
-                    Ok(WsMessage::Response { request_id, data }) => {
+                    Ok(WsMessage::Response { id, result }) => {
                         let text = serde_json::to_string(&json!({
-                            "type": "response",
-                            "request_id": request_id,
-                            "data": data
+                            "jsonrpc": "2.0",
+                            "id": id,
+                            "result": result
                         })).unwrap();
                         let _ = sender.send(Message::Text(text)).await;
                     }
-                    Ok(WsMessage::StatusUpdate(data)) => {
+                    Ok(WsMessage::Notification { method, params }) => {
                         let text = serde_json::to_string(&json!({
-                            "type": "status_update",
-                            "data": data
+                            "jsonrpc": "2.0",
+                            "method": method,
+                            "params": params
                         })).unwrap();
                         let _ = sender.send(Message::Text(text)).await;
                     }
-                    Ok(WsMessage::ModuleChanged { id, status }) => {
+                    Ok(WsMessage::ModuleAdded(data)) => {
                         let text = serde_json::to_string(&json!({
-                            "type": "module_status_changed",
-                            "module_id": id,
-                            "status": status
+                            "jsonrpc": "2.0",
+                            "method": "module_added",
+                            "params": data
+                        })).unwrap();
+                        let _ = sender.send(Message::Text(text)).await;
+                    }
+                    Ok(WsMessage::ModuleRemoved(id)) => {
+                        let text = serde_json::to_string(&json!({
+                            "jsonrpc": "2.0",
+                            "method": "module_removed",
+                            "params": { "id": id }
                         })).unwrap();
                         let _ = sender.send(Message::Text(text)).await;
                     }
@@ -121,8 +132,8 @@ async fn ws_socket_handler(socket: WebSocket, ctx: AppCtx) {
                     Some(Ok(Message::Text(text))) => {
                         if let Err(e) = handle_ws_request(&text, &ctx).await {
                             let text = serde_json::to_string(&json!({
-                                "type": "error",
-                                "error": e
+                                "jsonrpc": "2.0",
+                                "error": { "code": -32600, "message": e }
                             })).unwrap();
                             let _ = sender.send(Message::Text(text)).await;
                         }
@@ -139,76 +150,134 @@ async fn handle_ws_request(text: &str, ctx: &AppCtx) -> Result<(), String> {
     let req: serde_json::Value =
         serde_json::from_str(text).map_err(|e| format!("Invalid JSON: {}", e))?;
 
-    let action = req["action"]
-        .as_str()
-        .ok_or("Missing 'action' field")?;
-    let request_id = req["request_id"].as_str().unwrap_or("");
-    let data = req["data"].clone();
+    // Validate JSON-RPC 2.0
+    if req["jsonrpc"].as_str() != Some("2.0") {
+        return Err("Invalid JSON-RPC version, expected '2.0'".to_string());
+    }
 
-    match action {
+    let method = req["method"]
+        .as_str()
+        .ok_or("Missing 'method' field")?;
+
+    // id can be number or string or null; use json value to preserve type
+    let id = req["id"].clone();
+
+    // params from request, or fall back to "data" for backward compat
+    let params = if req["params"].is_null() {
+        req["data"].clone()
+    } else {
+        req["params"].clone()
+    };
+
+    match method {
         "get_core_status" => {
             let status = build_status_json(&ctx.inner).await;
             let _ = ctx.broadcaster.send(WsMessage::Response {
-                request_id: request_id.to_string(),
-                data: status,
+                id,
+                result: status,
             });
         }
         "get_modules" => {
             let pm = Arc::clone(&ctx.inner.plugin_manager);
             let _guard = pm.lock();
-            let modules = _guard.list();
+            let modules = _guard.list_full();
             drop(_guard);
             let _ = ctx.broadcaster.send(WsMessage::Response {
-                request_id: request_id.to_string(),
-                data: json!({ "modules": modules }),
+                id,
+                result: json!({"modules": modules}),
             });
         }
         "get_config" => {
             let config = ctx.inner.config.read().await.clone();
             let _ = ctx.broadcaster.send(WsMessage::Response {
-                request_id: request_id.to_string(),
-                data: serde_json::to_value(&config).unwrap_or_default(),
+                id,
+                result: serde_json::to_value(&config).unwrap_or_default(),
             });
         }
         "load_module" => {
-            let path = data["path"].as_str().ok_or("Missing 'path'")?;
+            let path = params["path"].as_str().ok_or("Missing 'path' in params")?;
             let pm = Arc::clone(&ctx.inner.plugin_manager);
-            let mut _guard = pm.lock();
-            match _guard.load_plugin(&std::path::PathBuf::from(path)) {
-                Ok(id) => {
-                    let _ = ctx.broadcaster.send(WsMessage::ModuleChanged {
-                        id: path.to_string(),
-                        status: "loaded".to_string(),
-                    });
+            let mut guard = pm.lock();
+            match guard.load_plugin(&std::path::PathBuf::from(path)) {
+                Ok((module_id, meta)) => {
+                    drop(guard);
+                    let _ = ctx.broadcaster.send(WsMessage::ModuleAdded(json!({
+                        "id": module_id,
+                        "name": meta.name,
+                        "version": meta.version,
+                    })));
                     let _ = ctx.broadcaster.send(WsMessage::Response {
-                        request_id: request_id.to_string(),
-                        data: json!({ "ok": true, "module_id": id }),
+                        id: id.clone(),
+                        result: json!({"ok": true, "module_id": module_id}),
                     });
                 }
                 Err(e) => {
-                    let data: serde_json::Value = json!({ "ok": false, "error": e.to_string() });
+                    drop(guard);
+                    let result: serde_json::Value = json!({"ok": false, "error": e.to_string()});
                     let _ = ctx.broadcaster.send(WsMessage::Response {
-                        request_id: request_id.to_string(),
-                        data,
+                        id,
+                        result,
+                    });
+                }
+            }
+        }
+        "modules.list" => {
+            let pm = Arc::clone(&ctx.inner.plugin_manager);
+            let guard = pm.lock();
+            let modules = guard.list_full();
+            drop(guard);
+            let _ = ctx.broadcaster.send(WsMessage::Response {
+                id,
+                result: json!({"modules": modules}),
+            });
+        }
+        "modules.rescan" => {
+            let pm = Arc::clone(&ctx.inner.plugin_manager);
+            let mut guard = pm.lock();
+            let (loaded, failed) = guard.rescan();
+            drop(guard);
+            let _ = ctx.broadcaster.send(WsMessage::Response {
+                id,
+                result: json!({"ok": true, "loaded": loaded, "failed": failed}),
+            });
+        }
+        "modules.unload" => {
+            let mid = params["id"].as_str().ok_or("missing id")?;
+            let pm = Arc::clone(&ctx.inner.plugin_manager);
+            let mut guard = pm.lock();
+            match guard.unload_plugin(mid) {
+                Ok(_) => {
+                    drop(guard);
+                    let _ = ctx.broadcaster.send(WsMessage::ModuleRemoved(mid.to_string()));
+                    let _ = ctx.broadcaster.send(WsMessage::Response {
+                        id,
+                        result: json!({"ok": true}),
+                    });
+                }
+                Err(e) => {
+                    drop(guard);
+                    let _ = ctx.broadcaster.send(WsMessage::Response {
+                        id,
+                        result: json!({"ok": false, "error": e.to_string()}),
                     });
                 }
             }
         }
         "get_p2p_state" => {
             let _ = ctx.broadcaster.send(WsMessage::Response {
-                request_id: request_id.to_string(),
-                data: json!({ "connected_peers": 0, "listening_addr": "" }),
+                id,
+                result: json!({"connected_peers": 0, "listening_addr": ""}),
             });
         }
         "dial_peer" => {
-            let _addr = data["addr"].as_str().ok_or("Missing 'addr'")?;
+            let _addr = params["addr"].as_str().ok_or("Missing 'addr' in params")?;
             tracing::info!("WS: dial_peer request");
             let _ = ctx.broadcaster.send(WsMessage::Response {
-                request_id: request_id.to_string(),
-                data: json!({ "ok": true }),
+                id,
+                result: json!({"ok": true}),
             });
         }
-        _ => return Err(format!("Unknown action: {}", action)),
+        _ => return Err(format!("Unknown method: {}", method)),
     }
 
     Ok(())
@@ -220,7 +289,7 @@ async fn build_status_json(state: &SharedState) -> serde_json::Value {
         .num_seconds();
     let pm = Arc::clone(&state.plugin_manager);
     let _guard = pm.lock();
-    let modules = _guard.list();
+    let modules = _guard.list_full();
     drop(_guard);
 
     serde_json::json!({
@@ -228,48 +297,6 @@ async fn build_status_json(state: &SharedState) -> serde_json::Value {
         "uptime_secs": uptime,
         "modules": modules,
     })
-}
-
-// === HTTP Handlers ===
-
-async fn get_status(State(ctx): State<AppCtx>) -> Json<ApiResponse<serde_json::Value>> {
-    let data = build_status_json(&ctx.inner).await;
-    Json(ApiResponse::ok(data))
-}
-
-async fn get_config(State(ctx): State<AppCtx>) -> Json<ApiResponse<Config>> {
-    let config = ctx.inner.config.read().await.clone();
-    Json(ApiResponse::ok(config))
-}
-
-async fn list_modules(State(ctx): State<AppCtx>) -> Json<ApiResponse<Vec<String>>> {
-    let pm = Arc::clone(&ctx.inner.plugin_manager);
-    let _guard = pm.lock();
-    let modules = _guard.list();
-    drop(_guard);
-    Json(ApiResponse::ok(modules))
-}
-
-async fn load_plugin(
-    State(ctx): State<AppCtx>,
-    Json(payload): Json<serde_json::Value>,
-) -> Json<ApiResponse<String>> {
-    let path = payload
-        .get("path")
-        .and_then(|v| v.as_str())
-        .ok_or("missing 'path' field");
-
-    match path {
-        Ok(p) => {
-            let pm = Arc::clone(&ctx.inner.plugin_manager);
-            let mut _guard = pm.lock();
-            match _guard.load_plugin(&std::path::PathBuf::from(p)) {
-                Ok(id) => Json(ApiResponse::ok(id)),
-                Err(e) => Json(ApiResponse::err(e)),
-            }
-        }
-        Err(e) => Json(ApiResponse::err(e)),
-    }
 }
 
 // === Logging Init ===
@@ -318,8 +345,31 @@ async fn main() -> anyhow::Result<()> {
 
     let (broadcaster, _) = broadcast::channel::<WsMessage>(100);
 
-    let mut plugin_manager = PluginManager::new(plugins_dir);
+    let mut plugin_manager = PluginManager::new(plugins_dir.clone());
     plugin_manager.load_all()?;
+
+    // Start file-system watcher for new .so modules
+    let module_dir = plugins_dir.clone();
+    tokio::spawn(async move {
+        use notify::{RecursiveMode, Watcher};
+        let (tx, rx) = std::sync::mpsc::channel();
+        let mut watcher = notify::recommended_watcher(tx).unwrap();
+        watcher.watch(module_dir.as_path(), RecursiveMode::NonRecursive).unwrap();
+        loop {
+            match rx.recv() {
+                Ok(Ok(event)) => {
+                    if let notify::EventKind::Create(_) = event.kind {
+                        for path in event.paths {
+                            if path.extension().and_then(|s| s.to_str()) == Some("so") {
+                                tracing::info!("New .so detected: {:?}", path);
+                            }
+                        }
+                    }
+                }
+                Ok(Err(_)) | Err(_) => break,
+            }
+        }
+    });
 
     let state: SharedState = Arc::new(AppState {
         version: env!("CARGO_PKG_VERSION").to_string(),
@@ -337,10 +387,6 @@ async fn main() -> anyhow::Result<()> {
     let port = ctx.inner.config.read().await.port;
 
     let app = Router::new()
-        .route("/api/core/status", routing::get(get_status))
-        .route("/api/config", routing::get(get_config))
-        .route("/api/modules", routing::get(list_modules))
-        .route("/api/plugins/load", routing::post(load_plugin))
         .route("/ws", routing::get(ws_handler))
         .route("/ping", routing::get(|| async { "pong" }))
         .layer(TraceLayer::new_for_http())

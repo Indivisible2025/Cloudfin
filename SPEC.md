@@ -139,25 +139,147 @@ Uninitialized → Initialized → Running → Stopped
                   Error
 ```
 
-### 3.3 Module Manifest
+### 3.3 模块分发格式
 
-每个模块目录必须包含 `manifest.json`：
+模块以 ZIP 包形式发布，ZIP 文件名格式：
+`CloudFin-Mod-{平台}-{模块名}-{版本}.zip`
+
+解压后放入 `{Core根目录}/Cloudfin/modules/` 目录：
+
+```
+CloudFin-Mod-{平台}-{模块名}-{版本}.zip
+├── CloudFin-Mod-{平台}-{模块名}-{版本}.so
+└── CloudFin-Mod-{平台}-{模块名}-{版本}.so.json
+```
+
+平台值：`Linux`、`Android`、`Windows`、`macOS`、`iOS`
+
+Linux 与 Android 共用同一份二进制时，平台字段写作 `Linux-Android`。
+
+示例：
+```
+CloudFin-Mod-Linux-Android-P2P-2026-04-04-1.zip
+├── CloudFin-Mod-Linux-Android-P2P-2026-04-04-1.so
+└── CloudFin-Mod-Linux-Android-P2P-2026-04-04-1.so.json
+```
+
+### 3.4 Module Manifest
+
+每个模块必须包含 `manifest.json`：
 
 ```json
 {
-  "id": "p2p",
-  "name": "P2P Module",
+  "id": "cloudfin.p2p",
+  "name": "P2P Networking",
   "version": "0.1.0",
-  "description": "P2P networking module",
+  "description": "P2P networking module using libp2p v0.54",
   "author": "Cloudfin Team",
-  "rust_version": "1.70+",
-  "dependencies": {},
-  "permissions": ["Network"],
-  "api_version": "v1"
+  "platform": ["android", "linux"],
+  "permissions": ["Network"]
 }
 ```
 
-### 3.4 模块列表
+**platform 字段说明：**
+
+| 值 | 适用平台 |
+|----|---------|
+| `["android"]` | Android |
+| `["linux"]` | Linux |
+| `["android", "linux"]` | Android 与 Linux 共用同一二进制 |
+| `["windows"]` | Windows |
+| `["macos"]` | macOS |
+| `["ios"]` | iOS |
+| `["macos", "ios"]` | macOS 与 iOS 共用同一二进制 |
+
+### 3.5 模块 UI 声明
+
+模块通过 `manifest.json` 向 Core 声明自己的 UI 结构和功能，Core 透传给 UI，UI 动态渲染。
+
+**结构：**
+
+```json
+{
+  "id": "cloudfin.p2p",
+  "name": "P2P Networking",
+  "version": "0.1.0",
+  "category": "Network",
+  "icon": "🌐",
+  "description": "P2P 网络连接管理",
+  "cards": {
+    "info": [
+      {
+        "title": "连接状态",
+        "items": [
+          { "key": "peers", "label": "已连接节点", "style": "text" },
+          { "key": "addr", "label": "监听地址", "style": "text" }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "title": "网络操作",
+        "items": [
+          { "key": "dial", "label": "连接节点", "action": "dial_peer" },
+          { "key": "disconnect", "label": "断开连接", "action": "disconnect_peer" }
+        ]
+      }
+    ],
+    "settings": [
+      {
+        "title": "连接设置",
+        "items": [
+          { "key": "listen_port", "label": "监听端口", "type": "number", "default": 9000 },
+          { "key": "enable_relay", "label": "启用中继", "type": "toggle", "default": true }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**字段说明：**
+
+| 字段 | 含义 | 示例 |
+|------|------|------|
+| `id` | 模块唯一标识 | `cloudfin.p2p` |
+| `name` | 显示名称 | `P2P Networking` |
+| `version` | 版本 | `0.1.0` |
+| `category` | 分类（决定 UI 归属哪一类卡片） | `Network` |
+| `icon` | emoji 图标 | `🌐` |
+| `description` | 模块描述 | `P2P 网络连接管理` |
+| `cards.info` | 信息展示卡片（只读） | 状态、数字等 |
+| `cards.actions` | 操作按钮卡片 | 点击触发 Core 调用 |
+| `cards.settings` | 可配置项卡片 | 端口、开关等 |
+
+**卡片 items 通用字段：**
+
+| 字段 | 含义 |
+|------|------|
+| `key` | 字段标识，Core 取值/设值用 |
+| `label` | UI 显示的名称 |
+| `action` | 操作标识（仅 actions 用） |
+
+**info item 的 `style`：**
+
+| 值 | 含义 |
+|------|------|
+| `text` | 普通文本 |
+| `number` | 数字 |
+| `duration` | 时长（秒） |
+| `status` | 状态色（green/yellow/red） |
+| `progress` | 进度条（0-100） |
+
+**settings item 的 `type`：**
+
+| 值 | 含义 | 附加字段 |
+|------|------|----------|
+| `text` | 文本输入 | — |
+| `number` | 数字输入 | `min`, `max` |
+| `toggle` | 开关 | — |
+| `select` | 下拉选择 | `options: []` |
+| `password` | 密码输入 | — |
+
+### 3.6 模块列表
 
 | ID | 名称 | 技术栈 | 状态 |
 |----|------|--------|------|
