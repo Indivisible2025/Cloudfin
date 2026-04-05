@@ -32,33 +32,14 @@
 - **选定**：WebSocket + JSON
 - **理由**：双平台通用（Android / iOS / Desktop）、调试友好、支持全双工持久连接、方案成熟
 
-### 1.4 P2P库
+## 2. Core WebSocket API
 
-- **选定**：libp2p v0.54
-- **理由**：模块化设计、支持多种传输协议（TCP/QUIC/WebRTC）、社区活跃、文档完善、与 yrs 协同工作良好
-
-### 1.5 CRDT库
-
-- **选定**：yrs 0.22
-- **理由**：Rust 原生实现、兼容 Yjs 协议、性能优秀、支持共享数据类型（Map/List/Text）、与 libp2p 结合使用案例丰富
-
----
-
-## 2. Core HTTP/WebSocket API
-
-### 2.1 HTTP端点
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/health` | 健康检查 |
-| GET | `/api/v1/status` | 系统状态（返回 Core 版本、已加载模块列表、运行时间） |
-
-### 2.2 WebSocket端点
+### 2.1 WebSocket端点
 
 - **路径**：`ws://127.0.0.1:19001/ws`
 - **说明**：UI 与 Core 的唯一通信通道，所有业务逻辑均通过此连接进行
 
-### 2.3 API Actions
+### 2.2 API Actions
 
 所有请求均为 JSON-RPC 风格，采用 `type: "request"` / `type: "response"` / `type: "error"` / `type: "event"` 四种消息类型。
 
@@ -205,16 +186,16 @@
 }
 ```
 
-### 2.4 错误码
+### 2.3 错误码
 
-| 错误码 | 含义 | HTTP 状态码映射 |
-|--------|------|----------------|
-| `ERR_MODULE_NOT_FOUND` | 模块不存在 | 404 |
-| `ERR_MODULE_ALREADY_LOADED` | 模块已加载 | 409 |
-| `ERR_METHOD_NOT_FOUND` | 模块方法不存在 | 404 |
-| `ERR_INVALID_PARAMS` | 参数无效 | 400 |
-| `ERR_INTERNAL` | 内部错误 | 500 |
-| `ERR_TIMEOUT` | 操作超时 | 504 |
+| 错误码 | 含义 |
+|--------|------|
+| `ERR_MODULE_NOT_FOUND` | 模块不存在 |
+| `ERR_MODULE_ALREADY_LOADED` | 模块已加载 |
+| `ERR_METHOD_NOT_FOUND` | 模块方法不存在 |
+| `ERR_INVALID_PARAMS` | 参数无效 |
+| `ERR_INTERNAL` | 内部错误 |
+| `ERR_TIMEOUT` | 操作超时 |
 
 **错误响应格式**：
 
@@ -377,271 +358,9 @@ pub trait Module: Send + Sync {
 
 ---
 
-## 5. UI 声明规范
+## 5. 配置存储
 
-每个模块可在 manifest 中声明自己的 UI 结构，Core 将声明透传给 UI 层，UI 根据声明动态渲染控制面板。
-
-### 5.1 顶层字段
-
-```json
-{
-  "id": "cloudfin.p2p",
-  "name": "P2P Networking",
-  "version": "0.1.0",
-  "category": "Network",
-  "icon": "🌐",
-  "description": "P2P 网络连接管理",
-  "cards": {
-    "info": [],
-    "actions": [],
-    "settings": []
-  }
-}
-```
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `id` | string | 是 | 模块 ID，须与 manifest.id 一致 |
-| `name` | string | 是 | 显示名称 |
-| `version` | string | 是 | 版本号 |
-| `category` | string | 否 | UI 分类（如 "Network"、"Storage"、"AI"） |
-| `icon` | string | 否 | Emoji 图标 |
-| `description` | string | 否 | 功能描述 |
-| `cards` | object | 是 | 三类卡片定义 |
-
-### 5.2 cards.info — 信息展示卡
-
-用于展示模块的运行指标和状态字段。
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `key` | string | 字段唯一标识 |
-| `label` | string | 显示标签 |
-| `style` | enum | 展示样式 |
-
-**`style` 取值说明**：
-
-| 值 | 说明 |
-|----|------|
-| `text` | 普通文本 |
-| `number` | 数字（自动千分位格式化） |
-| `duration` | 时长（秒数转为 `HH:MM:SS`） |
-| `status` | 状态徽章（Healthy=绿、Degraded=黄、Unhealthy=红） |
-| `progress` | 进度条（值范围 0~100） |
-
-**示例**：
-
-```json
-{
-  "key": "connected_peers",
-  "label": "已连接节点",
-  "style": "number"
-}
-```
-
-### 5.3 cards.actions — 操作按钮卡
-
-用于在 UI 中触发模块方法调用。
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `key` | string | 操作唯一标识 |
-| `label` | string | 按钮文字 |
-| `action` | string | 触发的 Core action（如 `module.call`，params 由 UI 从上下文收集） |
-| `confirm` | string | 可选，确认提示文字；存在时 UI 须先请求用户确认 |
-
-**示例**：
-
-```json
-{
-  "key": "disconnect_all",
-  "label": "断开所有连接",
-  "action": "module.call",
-  "confirm": "确定断开所有 P2P 连接？"
-}
-```
-
-### 5.4 cards.settings — 设置项卡
-
-用于展示和修改模块配置项。
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `key` | string | 配置 key（与 config.get/set 的 key 字段对应） |
-| `label` | string | 显示名称 |
-| `type` | enum | 输入控件类型 |
-| `default` | any | 默认值 |
-| `options` | array | 可选项（仅 `select` 类型需要） |
-| `description` | string | 可选，说明文字 |
-
-**`type` 取值说明**：
-
-| 值 | 控件类型 |
-|----|----------|
-| `text` | 单行文本输入框 |
-| `number` | 数字输入框 |
-| `toggle` | 开关 |
-| `select` | 下拉选择框 |
-| `password` | 密码输入框（输入被遮蔽） |
-
-**示例**：
-
-```json
-{
-  "key": "p2p.listen_port",
-  "label": "监听端口",
-  "type": "number",
-  "default": 9000,
-  "description": "P2P 节点监听端口，0 表示随机端口"
-}
-```
-
----
-
-## 6. 模块分发格式
-
-### 6.1 ZIP 包结构
-
-**文件名规范**：`CloudFin-Mod-{平台}-{模块名}-{版本}.zip`
-
-> 平台名须使用第 6.3 节表格中的标准值；模块名使用小写，多词用 `-` 连接。
-
-**示例**：`CloudFin-Mod-Linux-Android-P2P-0.1.0.zip`
-
-**包内结构**：
-
-```
-CloudFin-Mod-Linux-Android-P2P-0.1.0.zip
-├── CloudFin-Mod-Linux-Android-P2P-0.1.0.so      # 动态链接模块
-├── CloudFin-Mod-Linux-Android-P2P-0.1.0.so.json  # 模块 Manifest
-└── README.md                                     # 可选，说明文档
-```
-
-> - `.so` 文件为实际运行文件。
-> - `.so.json` 为模块 manifest，须与 `.so` 同名。
-> - 所有文件名须包含完整平台、模块名、版本信息，确保多版本共存不冲突。
-
-### 6.2 安装目录
-
-```
-{Core根目录}/Cloudfin/modules/
-```
-
-示例路径：
-
-```
-/opt/cloudfin/Cloudfin/modules/cloudfin.p2p/   # 已安装的 cloudfin.p2p 模块
-```
-
-### 6.3 平台命名对照表
-
-| 平台标识 | 适用操作系统 |
-|----------|--------------|
-| `Linux` | Linux（x86_64 / aarch64） |
-| `Android` | Android（arm64-v8a） |
-| `Linux-Android` | Linux 与 Android 共用（交叉编译产物） |
-| `Windows` | Windows（x86_64） |
-| `macOS` | macOS（x86_64 / aarch64） |
-| `iOS` | iOS（arm64） |
-
----
-
-## 7. 安装引导状态机
-
-```
-                         ┌──────────────────────────────────────────────┐
-                         │                    IDLE                      │
-                         │  （检测 Core 是否已安装）                      │
-                         └──────────────────────┬───────────────────────┘
-                                                │
-                                    ┌───────────▼───────────┐
-                                    │    CHECKING_CORE       │
-                                    │  （正在检测 Core 版本）  │
-                                    └───────────┬───────────┘
-                                                │
-                            ┌───────────────────┴───────────────────┐
-                            │                                       │
-                 ┌──────────▼──────────┐              ┌────────────▼───────────┐
-                 │   CORE_UP_TO_DATE    │              │   CORE_OUTDATED /      │
-                 │  （Core 版本已是最新）  │              │   CORE_NOT_INSTALLED   │
-                 └──────────┬──────────┘              └────────────┬───────────┘
-                            │                                       │
-                            │                            ┌─────────▼──────────┐
-                            │                            │  DOWNLOADING_CORE   │
-                            │                            │   （正在下载 Core）   │
-                            │                            └─────────┬──────────┘
-                            │                                       │
-                            │                            ┌─────────▼──────────┐
-                            │                            │  INSTALLING_CORE    │
-                            │                            │   （正在安装 Core）   │
-                            │                            └─────────┬──────────┘
-                            │                                       │
-                            └───────────────────┬───────────────────┘
-                                                │
-                                    ┌───────────▼───────────┐
-                                    │   CHECKING_MODULES     │
-                                    │ （检查已安装模块状态）    │
-                                    └───────────┬───────────┘
-                                                │
-                                    ┌───────────▼───────────┐
-                                    │  MODULES_USER_SELECT   │
-                                    │  （用户选择所需模块）    │
-                                    └───────────┬───────────┘
-                                                │
-                            ┌───────────────────┴───────────────────┐
-                            │                                       │
-                 ┌──────────▼──────────┐              ┌────────────▼───────────┐
-                 │   MODULES_UP_TO_DATE │              │  DOWNLOADING_MODULES   │
-                 │  （模块版本已是最新）   │              │   （正在下载模块）        │
-                 └──────────┬──────────┘              └────────────┬───────────┘
-                            │                                       │
-                            │                            ┌─────────▼──────────┐
-                            │                            │  INSTALLING_MODULES │
-                            │                            │   （正在安装模块）    │
-                            │                            └─────────┬──────────┘
-                            │                                       │
-                            └───────────────────┬───────────────────┘
-                                                │
-                                    ┌───────────▼───────────┐
-                                    │       READY            │
-                                    │  （Core 及模块就绪）     │
-                                    └────────────────────────┘
-```
-
-### 状态说明
-
-| 状态 | 说明 |
-|------|------|
-| `IDLE` | 初始状态，检测 Core 是否安装 |
-| `CHECKING_CORE` | 正在检测 Core 是否安装或版本是否最新 |
-| `DOWNLOADING_CORE` | 正在从分发服务器下载 Core |
-| `INSTALLING_CORE` | 正在安装 Core 到目标路径 |
-| `CHECKING_MODULES` | 正在检查已安装模块的版本状态 |
-| `MODULES_USER_SELECT` | 等待用户在 UI 选中需要安装的模块 |
-| `DOWNLOADING_MODULES` | 正在下载选中的模块包 |
-| `INSTALLING_MODULES` | 正在解压并安装模块到 `modules/` 目录 |
-| `READY` | 全部就绪，可进入正常运行状态 |
-
-### 状态转换触发条件
-
-| 源状态 | 目标状态 | 触发条件 |
-|--------|----------|----------|
-| `IDLE` | `CHECKING_CORE` | 系统启动或手动触发检查 |
-| `CHECKING_CORE` | `CORE_UP_TO_DATE` | Core 已安装且版本 >= 最新版本 |
-| `CHECKING_CORE` | `DOWNLOADING_CORE` | Core 未安装或版本低于最新版本 |
-| `DOWNLOADING_CORE` | `INSTALLING_CORE` | 下载完成（校验通过） |
-| `INSTALLING_CORE` | `CHECKING_MODULES` | 安装完成 |
-| `CHECKING_MODULES` | `MODULES_USER_SELECT` | 存在可选模块且用户尚未选择 |
-| `CHECKING_MODULES` | `READY` | 所有已安装模块已是最新，无可选更新 |
-| `MODULES_USER_SELECT` | `DOWNLOADING_MODULES` | 用户确认模块选择 |
-| `DOWNLOADING_MODULES` | `INSTALLING_MODULES` | 所有模块包下载完成 |
-| `INSTALLING_MODULES` | `READY` | 所有模块安装完成 |
-
----
-
-## 8. 配置存储
-
-### 8.1 配置文件
+### 5.1 配置文件
 
 - **存储位置**：`{Core根目录}/Cloudfin/config/`
 - **格式**：JSON（每个模块一个文件，文件名与模块 ID 一致）
@@ -660,7 +379,7 @@ CloudFin-Mod-Linux-Android-P2P-0.1.0.zip
 }
 ```
 
-### 8.2 密钥存储
+### 5.2 密钥存储
 
 - **存储位置**：`{Core根目录}/Cloudfin/secrets/`
 - **访问方式**：仅进程内存访问，**不落盘**
@@ -668,7 +387,7 @@ CloudFin-Mod-Linux-Android-P2P-0.1.0.zip
 
 > **安全提示**：所有密钥相关的配置不得写入 JSON 配置文件，须通过 Core secrets API 操作。
 
-### 8.3 配置变更通知
+### 5.3 配置变更通知
 
 配置变更通过以下流程生效：
 
@@ -679,15 +398,15 @@ CloudFin-Mod-Linux-Android-P2P-0.1.0.zip
 
 ---
 
-## 9. 日志规范
+## 6. 日志规范
 
-### 9.1 文件规范
+### 6.1 文件规范
 
 - **存储位置**：`{Core根目录}/Cloudfin/logs/`
 - **文件名格式**：`{YYYY}-{MM}-{DD}.log`（例：`2026-04-05.log`）
 - **滚动策略**：按天滚动，保留最近 **30 天**日志
 
-### 9.2 日志级别
+### 6.2 日志级别
 
 | 级别 | 关键字 | 使用场景 |
 |------|--------|----------|
@@ -697,7 +416,7 @@ CloudFin-Mod-Linux-Android-P2P-0.1.0.zip
 | DEBUG | `DEBUG` | 开发调试信息（请求/响应详情） |
 | TRACE | `TRACE` | 最细粒度追踪（协议帧解析、中间件处理） |
 
-### 9.3 日志格式
+### 6.3 日志格式
 
 ```
 {时间戳} {级别} [{模块ID}] {消息}
@@ -711,7 +430,7 @@ CloudFin-Mod-Linux-Android-P2P-0.1.0.zip
 2026-04-05T12:30:03.789Z ERROR [cloudfin.core] Failed to load module cloudfin.foo: library not found
 ```
 
-### 9.4 模块日志隔离
+### 6.4 模块日志隔离
 
 每个模块的日志须在 `[ ]` 中标注模块 ID，便于过滤排查。Core 日志使用 `[cloudfin.core]`。
 
@@ -723,23 +442,21 @@ CloudFin-Mod-Linux-Android-P2P-0.1.0.zip
 
 | 端口 | 用途 |
 |------|------|
-| 19001 | Core WebSocket 服务默认监听端口 |
-| 19000 | Core HTTP 服务默认监听端口（健康检查） |
-
+| 19001 | Core WebSocket 服务默认监听端口（UI↔Core 唯一通道） |
 ### A.2 目录结构
 
 ```
-Cloudfin/
-├── Cloudfin            # 可执行文件（Core）
-├── config/             # 配置文件
-│   ├── cloudfin.core.json
-│   └── cloudfin.p2p.json
-├── secrets/            # 密钥存储（内存，不落盘）
-├── modules/            # 动态模块
-│   ├── cloudfin.p2p.so
-│   └── cloudfin.p2p.so.json
-└── logs/               # 日志文件
-    └── 2026-04-05.log
+{CoreRoot}/Cloudfin/
+├── cloudfin-core          # 可执行文件
+├── config/
+│   ├── core.json          # Core 主配置
+│   └── modules/           # 模块配置目录
+├── modules/               # 模块文件目录（.so 和 .so.json 同目录）
+├── logs/
+│   ├── cloudfin.log
+│   └── cloudfin.log.2026-04-04
+├── cloudfin.pid
+└── data/                  # 模块运行时数据
 ```
 
 ### A.3 关键依赖版本
@@ -747,10 +464,8 @@ Cloudfin/
 | 依赖 | 版本 | 用途 |
 |------|------|------|
 | `tokio` | ^1.0 | 异步运行时 |
-| `axum` | ^0.7 | HTTP/WebSocket 服务 |
+| `axum` | ^0.7 | WebSocket 服务 |
 | `libloading` | ^0.8 | 动态模块加载 |
-| `libp2p` | ^0.54 | P2P 网络 |
-| `yrs` | ^0.22 | CRDT 共享状态 |
 | `serde` / `serde_json` | ^1.0 | 序列化/反序列化 |
 | `tracing` / `tracing-subscriber` | ^0.3 | 结构化日志 |
 | `anyhow` | ^1.0 | 错误处理 |
