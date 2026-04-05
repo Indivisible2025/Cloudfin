@@ -345,8 +345,8 @@ impl Module for TorModule {
     async fn call(&self, method: &str, params: Value) -> anyhow::Result<Value> {
         match method {
             "connect" => self.tor_connect(params).await,
-            " circuits" => self.list_circuits().await,
-            " new_circuit" => self.new_circuit(params).await,
+            "circuits" => self.list_circuits().await,
+            "new_circuit" => self.new_circuit(params).await,
             _ => Err(anyhow::anyhow!("Unknown method: {}", method)),
         }
     }
@@ -806,6 +806,7 @@ pub enum ModuleHealth {
     Healthy,
     Degraded(String),
     Unhealthy(String),
+    Unknown,
 }
 
 // ─── 模块元信息 ───────────────────────────────────
@@ -1062,12 +1063,7 @@ pub fn verify_module_version(module_version_str: &str) -> Result<Version> {
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum HealthStatus {
-    Healthy,
-    Degraded(String),   // 可恢复的异常，带原因描述
-    Unhealthy(String), // 严重异常
-    Unknown,
-}
+// HealthStatus 统一至 ModuleHealth（见 §5.1），本节引用 ModuleHealth
 ```
 
 **健康检查结果处理：**

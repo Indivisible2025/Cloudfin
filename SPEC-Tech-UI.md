@@ -1090,6 +1090,7 @@ interface StatusSnapshot {
   version: string;
   api_version: string;
   modules: ModuleInfo[];
+  timestamp: string; // L1 Core §2.1 定义
 }
 
 interface UIState {
