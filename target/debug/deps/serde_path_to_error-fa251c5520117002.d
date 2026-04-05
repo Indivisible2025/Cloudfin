@@ -1,9 +1,0 @@
-/home/nainyv/.openclaw/workspace/Cloudfin/target/debug/deps/serde_path_to_error-fa251c5520117002.d: /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/lib.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/de.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/path.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/ser.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/wrap.rs
-
-/home/nainyv/.openclaw/workspace/Cloudfin/target/debug/deps/libserde_path_to_error-fa251c5520117002.rmeta: /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/lib.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/de.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/path.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/ser.rs /home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/wrap.rs
-
-/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/lib.rs:
-/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/de.rs:
-/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/path.rs:
-/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/ser.rs:
-/home/nainyv/.cargo/registry/src/mirrors.ustc.edu.cn-38d0e5eb5da2abae/serde_path_to_error-0.1.20/src/wrap.rs:

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["ChangeKind"],"struct":["DeltaPrelim","Diff","TextEvent","TextPrelim","TextRef","YChange"],"trait":["Text"]};

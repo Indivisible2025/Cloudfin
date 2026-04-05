@@ -1,9 +1,0 @@
-(function() {
-    const implementors = Object.fromEntries([["yrs",[["impl <a class=\"trait\" href=\"https://docs.rs/serde_core/1.0.228/serde_core/de/trait.Error.html\" title=\"trait serde_core::de::Error\">Error</a> for <a class=\"enum\" href=\"yrs/encoding/read/enum.Error.html\" title=\"enum yrs::encoding::read::Error\">Error</a>",0]]]]);
-    if (window.register_implementors) {
-        window.register_implementors(implementors);
-    } else {
-        window.pending_implementors = implementors;
-    }
-})()
-//{"start":59,"fragment_lengths":[279]}

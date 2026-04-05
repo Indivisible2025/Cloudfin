@@ -1,22 +1,9 @@
-# Build artifacts
-target/
-cloudfin-ui/linux-desktop/src-tauri/target/
-cloudfin-ui/linux-desktop/src-tauri/Cargo.lock
-
-# Android
-cloudfin-android-service/.gradle/
-cloudfin-android-service/app/build/
-cloudfin-android-service/local.properties
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
+# OS files
 .DS_Store
 Thumbs.db
 
-# Flatpak build
-.flathub/
+# Editor
+*.swp
+*.swo
+.vscode/
+.idea/
