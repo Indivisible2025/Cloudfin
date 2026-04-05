@@ -379,20 +379,22 @@ Cloudfin-Core-Windows-amd64-v20260405-001.exe
 #### Modules 版本格式
 
 ```
-Cloudfin-Module-{模块英文名}-{系统}-v{年}{月}{日}-{当日迭代序号}.zip
+Cloudfin-Module-{模块类型英文}-{系统}-{模块名}-v{年}{月}{日}-{当日迭代序号}.zip
 ```
 
 | 字段 | 说明 |
 |------|------|
-| 模块英文名 | P2P / CRDT / TOR / Storage 等 |
+| 模块类型英文 | `Network`（通信层）/ `Encrypt`（加密层）/ `Sync`（同步层）|
 | 系统 | `Linux`（Android 和 Linux 共用）/ `Windows` / `MacOS`（macOS 和 iOS 共用）|
+| 模块名 | 具体模块名，如 `P2P` / `CRDT` / `TOR` / `crypto` |
 | 当日迭代序号 | 三位数字，从 001 开始，每日重置 |
 
 示例：
 ```
-Cloudfin-Module-P2P-Linux-v20260405-001.zip
-Cloudfin-Module-CRDT-Windows-v20260405-001.zip
-Cloudfin-Module-TOR-MacOS-v20260405-001.zip
+Cloudfin-Module-Network-Linux-P2P-v20260405-001.zip
+Cloudfin-Module-Encrypt-Windows-crypto-v20260405-001.zip
+Cloudfin-Module-Sync-Linux-CRDT-v20260405-001.zip
+Cloudfin-Module-Sync-MacOS-Storage-v20260405-001.zip
 ```
 
 > **注意：** Modules 系统分组中，`Linux` 同时适用于 Android 和 Linux，`MacOS` 同时适用于 macOS 和 iOS。
