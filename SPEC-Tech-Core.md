@@ -9,6 +9,8 @@
 
 ## 1. 框架选型
 
+**Core 使用 Rust**，以下框架均基于 Rust 生态。
+
 ### 1.1 WebSocket 框架对比
 
 UI 与 Core 之间**只走 WebSocket**，不使用 HTTP。以下对三个主流候选框架进行对比分析。
