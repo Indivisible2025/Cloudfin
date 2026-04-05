@@ -7,1444 +7,1240 @@
 
 ---
 
-## 摘要
+## 1. Modules 系统概述
 
-本文档定义 Cloudfin 的 Modules（模块）层技术规范。Modules 是 Core 控制的插件系统，分为三个模块层：
+### 1.1 三层 Modules 定位
 
-- **通信层（Network）**：P2P / TOR / I2P 等网络传输模块
-- **加密层（Encrypt）**：crypto 加密通信模块
-- **同步层（Sync）**：CRDT / Storage 等数据同步与持久化模块
+Cloudfin Modules 是 Core 的可插拔扩展，按功能分为三层，三层之间**不直接通信**，统一由 Core 充当中介和调度器。
 
-Modules 之间不直接相互通信，所有交互通过 Core 统一调度。本文档覆盖 Module Trait 设计、状态机、Manifest 声明、模块实现细节及分发格式。
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Core（大脑）                          │
+│              连接管理 / 路由 / 模块调度 / 配置                  │
+└───────▲─────────────────────▲─────────────────────▲─────────┘
+        │                     │                     │
+   通信层请求            加密层请求            同步层请求
+        │                     │                     │
+┌───────┴─────────────────────┴─────────────────────┴─────────┐
+│  三层 Modules 只和 Core 通信，彼此不直接通信                    │
+└─────────────────────────────────────────────────────────────┘
 
-> **前置文档**：[SPEC-Design.md](./SPEC-Design.md) 定义了三层模块的整体架构。
+  ┌─────────────────────────────────────────────────────────┐
+  │  通信层 Modules（地基 / 桥梁）                              │
+  │  提供节点互联能力，负责网络通路                              │
+  │  p2p（libp2p）/ tor（arti）/ i2p                         │
+  └─────────────────────────────┬───────────────────────────┘
+                                │ 在通信基础上加一层保护
+  ┌─────────────────────────────▼───────────────────────────┐
+  │  加密层 Modules（装修 / 安全设施）                          │
+  │  端到端加密管道                                            │
+  │  crypto（WireGuard / Noise）                              │
+  └─────────────────────────────┬───────────────────────────┘
+                                │ 真正有价值的业务在这一层
+  ┌─────────────────────────────▼───────────────────────────┐
+  │  同步层 Modules（人工作 / 车通行）                          │
+  │  最终一致性文档协同 / 本地持久化存储                          │
+  │  crdt（yrs）/ storage                                    │
+  └─────────────────────────────────────────────────────────┘
+```
+
+**三层职责速查表：**
+
+| 层次 | 定位 | 类比 | Modules | 核心价值 |
+|------|------|------|---------|---------|
+| 通信层 | 地基 + 桥梁 | 公路网 | p2p、tor、i2p | 节点互联、网络通路 |
+| 加密层 | 装修 + 安全设施 | 安检站 / 隧道 | crypto | 数据机密性、完整性 |
+| 同步层 | 人工作 + 车通行 | 工厂 / 仓库 | crdt、storage | 真正有价值的业务逻辑 |
+
+### 1.2 模块与 Core 的关系（只和 Core 通信）
+
+Modules 是 Core 的扩展，不能独立运作。三层 Modules 均通过 Core 统一调度，模块间不直接通信：
+
+```
+同步层模块 → Core（请求发送数据）
+              Core → 通信层模块（实际发包）
+                    对方 → Core → 同步层模块（收到数据）
+```
+
+**模块调用 Core 的方式：**
+
+- **模块 → Core**：模块向 Core 注册自己的能力（`init`），响应 Core 的调用（`call`）
+- **Core → 模块**：Core 通过统一 `Module` Trait 接口调用模块的方法，模块返回结果
+- **模块间**：不通信，所有跨模块协作由 Core 统一协调
+
+### 1.3 模块安装目录结构
+
+```
+{CoreRoot}/Cloudfin/
+└── modules/                         # 模块文件目录（.so 和 .so.json 同目录）
+    ├── CloudFin-Mod-Linux-amd64-P2P-v20260405-001.so
+    ├── CloudFin-Mod-Linux-amd64-P2P-v20260405-001.so.json
+    ├── CloudFin-Mod-Linux-amd64-CRDT-v20260405-001.so
+    ├── CloudFin-Mod-Linux-amd64-CRDT-v20260405-001.so.json
+    └── ...
+```
+
+模块配置存储在：
+
+```
+{CoreRoot}/Cloudfin/config/modules/   # 每个模块一个 .json
+    ├── cloudfin.p2p.json
+    ├── cloudfin.crdt.json
+    └── cloudfin.crypto.json
+```
 
 ---
 
-## 1. Module Trait 设计
+## 2. 通信层 Modules
 
-### 1.1 Trait 定义
+通信层 Modules 是整个系统的地基，负责建立节点之间的网络通路，提供 P2P 连接、NAT 穿透和匿名路由能力。
 
-所有 Module 必须实现 `Module` Trait，由 Core 统一加载、初始化、启停。以下是完整的 Trait 签名：
+### 2.1 P2P 模块（libp2p v0.54）
+
+**模块 ID：** `cloudfin.p2p`
+**底层实现：** libp2p v0.54
+**开源许可：** AGPL-3.0
+**分发包名：** `CloudFin-Module-Network-Linux-P2P-v{YYYYMMDD}-{NNN}.zip`
+
+#### 2.1.1 功能概述
+
+P2P 模块负责去中心化节点发现与连接管理，是 Cloudfin 网络的基础通道。
+
+**核心能力：**
+
+| 能力 | 说明 |
+|------|------|
+| 节点发现 | 通过 Kademlia DHT 进行去中心化节点发现 |
+| NAT 穿透 | 支持 libp2p 内置 NAT 穿透方案（ICE-lite / hole punching） |
+| 连接复用 | 单 TCP 连接上多路复用多个 substream |
+| 中继转发 | 支持 relay 节点作为中继（fallback when P2P fails） |
+| 多传输协议 | TCP、QUIC、WebSocket、WebRTC |
+
+#### 2.1.2 配置文件（`cloudfin.p2p.json`）
+
+```json
+{
+  "listen_addresses": [
+    "/ip4/0.0.0.0/tcp/9000",
+    "/ip4/0.0.0.0/udp/9000/quic"
+  ],
+  "max_peers": 50,
+  "enable_upnp": true,
+  "enable_relay": true,
+  "boot_nodes": [
+    "/ip4/1.2.3.4/tcp/9000/p2p/QmTihkzQ3w2K3jN5c5vL8gR4pMn6qR2tUi8vX9zA1bC3dE"
+  ],
+  "dht_mode": "server",
+  "connection_limits": {
+    "max_incoming": 30,
+    "max_outgoing": 20
+  }
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `listen_addresses` | Array\<String\> | `["/ip4/0.0.0.0/tcp/9000"]` | 监听地址列表 |
+| `max_peers` | u32 | `50` | 最大 peer 数量 |
+| `enable_upnp` | bool | `true` | 是否启用 UPnP 端口映射 |
+| `enable_relay` | bool | `true` | 是否启用 relay 中继（NAT 穿透失败时 fallback） |
+| `boot_nodes` | Array\<String\> | `[]` | 引导节点地址 |
+| `dht_mode` | String | `"server"` | DHT 模式：`server` / `client` |
+| `connection_limits.max_incoming` | u32 | `30` | 最大入站连接数 |
+| `connection_limits.max_outgoing` | u32 | `20` | 最大出站连接数 |
+
+#### 2.1.3 Module Trait 实现
 
 ```rust
+use async_trait::async_trait;
 use serde_json::Value;
-use anyhow::Result;
 
+pub struct P2PModule {
+    config: Value,
+    swarm: Option<Swarm>,
+    status: ModuleHealth,
+}
+
+#[async_trait]
+impl Module for P2PModule {
+    fn id(&self) -> &str {
+        "cloudfin.p2p"
+    }
+
+    fn name(&self) -> &str {
+        "P2P Networking"
+    }
+
+    fn version(&self) -> &str {
+        "0.1.0"
+    }
+
+    async fn init(&mut self, config: Value) -> anyhow::Result<()> {
+        self.config = config.clone();
+        // 初始化 libp2p Swarm
+        let swarm = build_swarm(&config)?;
+        self.swarm = Some(swarm);
+        self.status = ModuleHealth::Healthy;
+        tracing::info!(target: "cloudfin::module::p2p", "P2P module initialized");
+        Ok(())
+    }
+
+    async fn start(&mut self) -> anyhow::Result<()> {
+        if let Some(swarm) = self.swarm.take() {
+            // 启动 Swarm 事件循环
+            self.spawn_swarm_task(swarm).await;
+            self.status = ModuleHealth::Healthy;
+            tracing::info!(target: "cloudfin::module::p2p", "P2P module started");
+        }
+        Ok(())
+    }
+
+    async fn stop(&mut self) -> anyhow::Result<()> {
+        // 优雅关闭所有连接
+        self.close_all_connections().await;
+        self.status = ModuleHealth::Healthy;
+        tracing::info!(target: "cloudfin::module::p2p", "P2P module stopped");
+        Ok(())
+    }
+
+    fn status(&self) -> ModuleHealth {
+        self.status
+    }
+
+    async fn call(&self, method: &str, params: Value) -> anyhow::Result<Value> {
+        match method {
+            "dial" => self.dial(params).await,
+            "listen" => self.listen(params).await,
+            "peers" => self.list_peers().await,
+            "connected" => self.is_connected(params).await,
+            _ => Err(anyhow::anyhow!("Unknown method: {}", method)),
+        }
+    }
+}
+```
+
+#### 2.1.4 `call` 方法接口
+
+| 方法 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `dial` | `{ "addr": "/ip4/x.x.x.x/tcp/9000/p2p/..." }` | `{ "peer_id": "..." }` | 主动连接远端节点 |
+| `listen` | `{ "addr": "/ip4/0.0.0.0/tcp/9000" }` | `{ "listening": ["..."] }` | 启动监听 |
+| `peers` | `{}` | `{ "peers": [{ "id": "...", "addr": "..." }] }` | 列出所有已知 peer |
+| `connected` | `{ "peer_id": "..." }` | `{ "connected": true/false }` | 检查是否连接到指定 peer |
+
+---
+
+### 2.2 TOR 模块（arti）
+
+**模块 ID：** `cloudfin.tor`
+**底层实现：** arti（Rust 实现的 TOR 协议）
+**开源许可：** AGPL-3.0
+**分发包名：** `CloudFin-Module-Network-Linux-TOR-v{YYYYMMDD}-{NNN}.zip`
+
+#### 2.2.1 功能概述
+
+TOR 模块提供洋葱路由匿名流量能力，适用于需要隐私保护的场景。
+
+**核心能力：**
+
+| 能力 | 说明 |
+|------|------|
+| 洋葱路由 | 基于 arti 的纯 Rust TOR 实现 |
+| 单 circuit 多 stream | 支持在一个电路上复用多个数据流 |
+| 目录缓存 | 内置本地目录缓存，减少网络请求 |
+| 可插拔传输 | 支持与 P2P 模块协同工作 |
+
+#### 2.2.2 配置文件（`cloudfin.tor.json`）
+
+```json
+{
+  "data_directory": "{CoreRoot}/Cloudfin/data/tor",
+  "socks_port": 9050,
+  "control_port": 9051,
+  "enable_expert": false,
+  "circuit_count": 3,
+  "bridges": [],
+  "use_bridges": false
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `data_directory` | String | — | TOR 数据目录（含私钥、circuit 状态） |
+| `socks_port` | u16 | `9050` | SOCKS5 代理端口 |
+| `control_port` | u16 | `9051` | TOR 控制端口（用于模块间通信） |
+| `enable_expert` | bool | `false` | 是否启用专家模式（自定义 circuit） |
+| `circuit_count` | u32 | `3` | 同时维持的 circuit 数量 |
+| `bridges` | Array\<String\> | `[]` | 网桥地址（需要时配置） |
+| `use_bridges` | bool | `false` | 是否使用网桥连接 |
+
+#### 2.2.3 Module Trait 实现
+
+```rust
+pub struct TorModule {
+    config: Value,
+   arti_client: Option<ArtiClient>,
+    status: ModuleHealth,
+}
+
+#[async_trait]
+impl Module for TorModule {
+    fn id(&self) -> &str {
+        "cloudfin.tor"
+    }
+
+    fn name(&self) -> &str {
+        "TOR Anonymous Network"
+    }
+
+    fn version(&self) -> &str {
+        "0.1.0"
+    }
+
+    async fn init(&mut self, config: Value) -> anyhow::Result<()> {
+        let data_dir = config["data_directory"]
+            .as_str()
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                PathBuf::from(std::env::var("CLOUDFIN_ROOT").unwrap())
+                    .join("data/tor")
+            });
+        std::fs::create_dir_all(&data_dir)?;
+        letarti_client = ArtiBuilder::default()
+            .data_dir(&data_dir)
+            .build()
+            .await?;
+        self.arti_client = Some(arti_client);
+        self.status = ModuleHealth::Healthy;
+        tracing::info!(target: "cloudfin::module::tor", "TOR module initialized");
+        Ok(())
+    }
+
+    async fn start(&mut self) -> anyhow::Result<()> {
+        if let Some(ref mut client) = self.arti_client {
+            client.enable().await?;
+        }
+        tracing::info!(target: "cloudfin::module::tor", "TOR module started");
+        Ok(())
+    }
+
+    async fn stop(&mut self) -> anyhow::Result<()> {
+        if let Some(ref mut client) = self.arti_client {
+            client.disable().await?;
+        }
+        tracing::info!(target: "cloudfin::module::tor", "TOR module stopped");
+        Ok(())
+    }
+
+    fn status(&self) -> ModuleHealth {
+        self.status
+    }
+
+    async fn call(&self, method: &str, params: Value) -> anyhow::Result<Value> {
+        match method {
+            "connect" => self.tor_connect(params).await,
+            " circuits" => self.list_circuits().await,
+            " new_circuit" => self.new_circuit(params).await,
+            _ => Err(anyhow::anyhow!("Unknown method: {}", method)),
+        }
+    }
+}
+```
+
+#### 2.2.4 `call` 方法接口
+
+| 方法 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `connect` | `{ "host": "...", "port": 80 }` | `{ "stream_id": "..." }` | 通过 TOR 网络建立连接 |
+| `circuits` | `{}` | `{ "circuits": [...] }` | 列出当前活跃的 circuits |
+| `new_circuit` | `{ "purpose": "general" }` | `{ "circuit_id": "..." }` | 创建新的匿名电路 |
+
+---
+
+### 2.3 I2P 模块（待定）
+
+**模块 ID：** `cloudfin.i2p`
+**底层实现：** 待定
+**开源许可：** 待定
+**状态：** 规划中，暂未实现
+
+I2P 模块提供另一种匿名网络隧道能力，与 TOR 模块互补，适用于不同威胁模型。实现细节待补充。
+
+---
+
+## 3. 加密层 Modules
+
+加密层 Modules 在通信层的基础上提供端到端加密管道，确保数据机密性和完整性。
+
+### 3.1 crypto 模块（WireGuard / Noise）
+
+**模块 ID：** `cloudfin.crypto`
+**开源许可：** 商业授权
+**分发包名：** `CloudFin-Module-Encrypt-{OS}-crypto-v{YYYYMMDD}-{NNN}.zip`
+
+#### 3.1.1 功能概述
+
+crypto 模块为 P2P 连接提供端到端加密，支持 WireGuard 协议和 Noise 框架两种模式。
+
+**核心能力：**
+
+| 能力 | 说明 |
+|------|------|
+| WireGuard 模式 | 基于 WireGuard 协议，适合端到端 VPN 场景 |
+| Noise 协议 | 基于 libnoise，支持灵活的加密握手模式 |
+| 前向保密（PFS） | 每个会话独立密钥，泄密历史无法解密 |
+| 密钥交换 | 支持 Curve25519、ECDSA 多种密钥算法 |
+
+#### 3.1.2 配置文件（`cloudfin.crypto.json`）
+
+```json
+{
+  "mode": "noise",
+  "noise": {
+    "handshake_pattern": "IK",
+    "local_private_key_ref": "key:local_static",
+    "local_ephemeral_key_ref": "key:local_ephemeral",
+    "remote_static_key_ref": null
+  },
+  "wireguard": {
+    "listen_port": 51820,
+    "endpoint": null,
+    "allowed_ips": ["0.0.0.0/0", "::/0"],
+    "persistent_keepalive": 25
+  }
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `mode` | String | `"noise"` | 加密模式：`noise` 或 `wireguard` |
+| `noise.handshake_pattern` | String | `"IK"` | Noise 握手模式 |
+| `noise.local_private_key_ref` | String | — | 本地静态私钥引用（来自 SecretVault） |
+| `wireguard.listen_port` | u16 | `51820` | WireGuard 监听端口 |
+| `wireguard.allowed_ips` | Array\<String\> | `["0.0.0.0/0"]` | WireGuard 允许的 IP 范围 |
+| `wireguard.persistent_keepalive` | u16 | `25` | 保活间隔（秒），0 表示禁用 |
+
+#### 3.1.3 Module Trait 实现
+
+```rust
+pub struct CryptoModule {
+    config: Value,
+    cipher_states: HashMap<PeerId, CipherState>,
+    status: ModuleHealth,
+}
+
+#[async_trait]
+impl Module for CryptoModule {
+    fn id(&self) -> &str {
+        "cloudfin.crypto"
+    }
+
+    fn name(&self) -> &str {
+        "End-to-End Encryption"
+    }
+
+    fn version(&self) -> &str {
+        "0.1.0"
+    }
+
+    async fn init(&mut self, config: Value) -> anyhow::Result<()> {
+        self.config = config.clone();
+        self.cipher_states = HashMap::new();
+        self.status = ModuleHealth::Healthy;
+        tracing::info!(target: "cloudfin::module::crypto", "Crypto module initialized");
+        Ok(())
+    }
+
+    async fn start(&mut self) -> anyhow::Result<()> {
+        tracing::info!(target: "cloudfin::module::crypto", "Crypto module started");
+        Ok(())
+    }
+
+    async fn stop(&mut self) -> anyhow::Result<()> {
+        // 覆写并清除所有密钥状态
+        for (_, state) in self.cipher_states.drain() {
+            state.destroy();
+        }
+        tracing::info!(target: "cloudfin::module::crypto", "Crypto module stopped");
+        Ok(())
+    }
+
+    fn status(&self) -> ModuleHealth {
+        self.status
+    }
+
+    async fn call(&self, method: &str, params: Value) -> anyhow::Result<Value> {
+        match method {
+            "encrypt" => self.encrypt(params).await,
+            "decrypt" => self.decrypt(params).await,
+            "init_handshake" => self.init_handshake(params).await,
+            "complete_handshake" => self.complete_handshake(params).await,
+            _ => Err(anyhow::anyhow!("Unknown method: {}", method)),
+        }
+    }
+}
+```
+
+#### 3.1.4 `call` 方法接口
+
+| 方法 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `encrypt` | `{ "peer_id": "...", "plaintext": "..." }` | `{ "ciphertext": "..." }` | 加密数据 |
+| `decrypt` | `{ "peer_id": "...", "ciphertext": "..." }` | `{ "plaintext": "..." }` | 解密数据 |
+| `init_handshake` | `{ "peer_id": "...", "local_static_key_ref": "..." }` | `{ "handshake_payload": "..." }` | 初始化密钥交换 |
+| `complete_handshake` | `{ "peer_id": "...", "handshake_payload": "..." }` | `{ "session_established": true }` | 完成密钥交换 |
+
+---
+
+## 4. 同步层 Modules
+
+同步层 Modules 是 Cloudfin 的核心价值层，提供最终一致性的文档协同和本地持久化存储能力。
+
+### 4.1 CRDT 模块（yrs 0.22）
+
+**模块 ID：** `cloudfin.crdt`
+**底层实现：** yrs（Yjs Rust 核心）v0.22
+**开源许可：** AGPL-3.0
+**分发包名：** `CloudFin-Module-Sync-Linux-CRDT-v{YYYYMMDD}-{NNN}.zip`
+
+#### 4.1.1 功能概述
+
+CRDT 模块提供最终一致性的文档协同能力，基于 yrs（Yjs Rust）实现，支持离线编辑和冲突自动合并。
+
+**核心能力：**
+
+| 能力 | 说明 |
+|------|------|
+| CRDT 文档类型 | 支持 Y.Doc（含 Text、Map、Array、XmlFragment 等） |
+| 更新传播 | 将本地更新序列化为二进制，通过 P2P 模块传播 |
+| 冲突合并 | 离线编辑可自动合并，无需人工干预 |
+| Undo / Redo | 支持撤销/重做（文档级别） |
+| 持久化 | 支持将 Doc 状态持久化到 storage 模块 |
+
+#### 4.1.2 配置文件（`cloudfin.crdt.json`）
+
+```json
+{
+  "gc_enabled": true,
+  "snapshots_enabled": false,
+  "snapshot_interval_secs": 3600,
+  "max_documents": 100,
+  "sync_transport": "p2p",
+  "encoding": "binary"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `gc_enabled` | bool | `true` | 是否启用垃圾回收（清理已删除的 item） |
+| `snapshots_enabled` | bool | `false` | 是否启用定期快照 |
+| `snapshot_interval_secs` | u64 | `3600` | 快照间隔（秒） |
+| `max_documents` | u32 | `100` | 最大文档数量上限 |
+| `sync_transport` | String | `"p2p"` | 同步传输方式（`p2p` 或 `relay`） |
+| `encoding` | String | `"binary"` | 更新编码格式：`binary` 或 `json` |
+
+#### 4.1.3 Module Trait 实现
+
+```rust
+use yrs::{Doc, Transact, Update};
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+pub struct CrdtModule {
+    config: Value,
+    documents: Arc<RwLock<HashMap<String, Doc>>>,
+    update_tx: broadcast::Sender<DocUpdate>,
+    status: ModuleHealth,
+}
+
+#[derive(Clone)]
+pub struct DocUpdate {
+    pub doc_id: String,
+    pub update: Vec<u8>,
+    pub origin: PeerId,
+}
+
+#[async_trait]
+impl Module for CrdtModule {
+    fn id(&self) -> &str {
+        "cloudfin.crdt"
+    }
+
+    fn name(&self) -> &str {
+        "CRDT Document Sync"
+    }
+
+    fn version(&self) -> &str {
+        "0.1.0"
+    }
+
+    async fn init(&mut self, config: Value) -> anyhow::Result<()> {
+        self.config = config.clone();
+        self.documents = Arc::new(RwLock::new(HashMap::new()));
+        self.status = ModuleHealth::Healthy;
+        tracing::info!(target: "cloudfin::module::crdt", "CRDT module initialized");
+        Ok(())
+    }
+
+    async fn start(&mut self) -> anyhow::Result<()> {
+        // 启动更新广播任务
+        self.spawn_sync_task().await;
+        tracing::info!(target: "cloudfin::module::crdt", "CRDT module started");
+        Ok(())
+    }
+
+    async fn stop(&mut self) -> anyhow::Result<()> {
+        // 持久化所有文档状态
+        self.persist_all().await?;
+        tracing::info!(target: "cloudfin::module::crdt", "CRDT module stopped");
+        Ok(())
+    }
+
+    fn status(&self) -> ModuleHealth {
+        self.status
+    }
+
+    async fn call(&self, method: &str, params: Value) -> anyhow::Result<Value> {
+        match method {
+            "doc_create" => self.doc_create(params).await,
+            "doc_get" => self.doc_get(params).await,
+            "doc_update" => self.doc_update(params).await,
+            "doc_apply" => self.doc_apply(params).await,
+            "doc_subscribe" => self.doc_subscribe(params).await,
+            _ => Err(anyhow::anyhow!("Unknown method: {}", method)),
+        }
+    }
+}
+```
+
+#### 4.1.4 `call` 方法接口
+
+| 方法 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `doc_create` | `{ "id": "doc-uuid", "type": "text" }` | `{ "doc_id": "..." }` | 创建新文档 |
+| `doc_get` | `{ "id": "doc-uuid" }` | `{ "state": "..." }` | 获取文档当前状态 |
+| `doc_update` | `{ "id": "doc-uuid", "update": "base64..." }` | `{ "update": "base64..." }` | 对文档执行本地更新 |
+| `doc_apply` | `{ "id": "doc-uuid", "update": "base64..." }` | `{}` | 应用来自远端的更新 |
+| `doc_subscribe` | `{ "id": "doc-uuid" }` | event stream | 订阅文档变更事件 |
+
+---
+
+### 4.2 Storage 模块
+
+**模块 ID：** `cloudfin.storage`
+**开源许可：** AGPL-3.0
+**分发包名：** `CloudFin-Module-Sync-{OS}-Storage-v{YYYYMMDD}-{NNN}.zip`
+
+#### 4.2.1 功能概述
+
+Storage 模块提供本地持久化存储抽象，支持键值存储、文档存储和文件存储三种模式。
+
+**核心能力：**
+
+| 能力 | 说明 |
+|------|------|
+| 键值存储 | K/V 存储（基于 RocksDB 或 Sled） |
+| 文档存储 | JSON 文档存储（CRDT 模块状态快照） |
+| 文件存储 | 大文件块存储（分块、压缩、去重） |
+| 加密存储 | 支持对存储内容进行加密（AES-256-GCM） |
+| 备份导出 | 支持将存储内容导出为 tarball |
+
+#### 4.2.2 配置文件（`cloudfin.storage.json`）
+
+```json
+{
+  "engine": "rocksdb",
+  "data_dir": "{CoreRoot}/Cloudfin/data/storage",
+  "kv": {
+    "enabled": true,
+    "max_db_size_gb": 10
+  },
+  "docstore": {
+    "enabled": true,
+    "collection_names": ["crdt_snapshots", "config_backups"]
+  },
+  "filestore": {
+    "enabled": true,
+    "chunk_size_kb": 256,
+    "dedup_enabled": true
+  },
+  "encryption": {
+    "enabled": false,
+    "key_ref": null
+  }
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `engine` | String | `"rocksdb"` | 存储引擎：`rocksdb` 或 `sled` |
+| `data_dir` | String | — | 存储根目录 |
+| `kv.enabled` | bool | `true` | 是否启用键值存储 |
+| `kv.max_db_size_gb` | u32 | `10` | KV 数据库最大体积 |
+| `docstore.enabled` | bool | `true` | 是否启用文档存储 |
+| `filestore.enabled` | bool | `true` | 是否启用文件存储 |
+| `filestore.chunk_size_kb` | u32 | `256` | 文件分块大小（KB） |
+| `filestore.dedup_enabled` | bool | `true` | 是否启用去重 |
+| `encryption.enabled` | bool | `false` | 是否启用存储加密 |
+| `encryption.key_ref` | String | `null` | 加密密钥引用（来自 SecretVault） |
+
+#### 4.2.3 Module Trait 实现
+
+```rust
+use rocksdb::{DB, Options};
+
+pub struct StorageModule {
+    config: Value,
+    db: Option<DB>,
+    status: ModuleHealth,
+}
+
+#[async_trait]
+impl Module for StorageModule {
+    fn id(&self) -> &str {
+        "cloudfin.storage"
+    }
+
+    fn name(&self) -> &str {
+        "Persistent Storage"
+    }
+
+    fn version(&self) -> &str {
+        "0.1.0"
+    }
+
+    async fn init(&mut self, config: Value) -> anyhow::Result<()> {
+        let data_dir = config["data_dir"]
+            .as_str()
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                PathBuf::from(std::env::var("CLOUDFIN_ROOT").unwrap())
+                    .join("data/storage")
+            });
+        std::fs::create_dir_all(&data_dir)?;
+
+        let mut db_opts = Options::default();
+        db_opts.create_if_missing(true);
+        let db = DB::open(&db_opts, &data_dir)?;
+        self.db = Some(db);
+        self.status = ModuleHealth::Healthy;
+        tracing::info!(target: "cloudfin::module::storage", "Storage module initialized");
+        Ok(())
+    }
+
+    async fn start(&mut self) -> anyhow::Result<()> {
+        tracing::info!(target: "cloudfin::module::storage", "Storage module started");
+        Ok(())
+    }
+
+    async fn stop(&mut self) -> anyhow::Result<()> {
+        if let Some(db) = self.db.take() {
+            db.close();
+        }
+        tracing::info!(target: "cloudfin::module::storage", "Storage module stopped");
+        Ok(())
+    }
+
+    fn status(&self) -> ModuleHealth {
+        self.status
+    }
+
+    async fn call(&self, method: &str, params: Value) -> anyhow::Result<Value> {
+        match method {
+            "kv_get" => self.kv_get(params).await,
+            "kv_set" => self.kv_set(params).await,
+            "kv_del" => self.kv_del(params).await,
+            "doc_put" => self.doc_put(params).await,
+            "doc_get" => self.doc_get(params).await,
+            "file_put" => self.file_put(params).await,
+            "file_get" => self.file_get(params).await,
+            "export" => self.export(params).await,
+            _ => Err(anyhow::anyhow!("Unknown method: {}", method)),
+        }
+    }
+}
+```
+
+#### 4.2.4 `call` 方法接口
+
+| 方法 | 参数 | 返回 | 说明 |
+|------|------|------|------|
+| `kv_get` | `{ "key": "..." }` | `{ "value": "..." }` | 获取 KV 值 |
+| `kv_set` | `{ "key": "...", "value": "..." }` | `{}` | 设置 KV 值 |
+| `kv_del` | `{ "key": "..." }` | `{}` | 删除 KV 值 |
+| `doc_put` | `{ "collection": "...", "id": "...", "doc": {...} }` | `{}` | 存储 JSON 文档 |
+| `doc_get` | `{ "collection": "...", "id": "..." }` | `{ "doc": {...} }` | 获取 JSON 文档 |
+| `file_put` | `{ "path": "...", "data": "base64..." }` | `{ "file_id": "..." }` | 存储文件 |
+| `file_get` | `{ "file_id": "..." }` | `{ "data": "base64..." }` | 获取文件 |
+| `export` | `{ "format": "tarball" }` | `{ "data": "base64..." }` | 导出全部存储数据 |
+
+---
+
+## 5. 共同接口
+
+所有 Cloudfin Modules 必须实现以下统一接口，确保与 Core 的兼容性和可替换性。
+
+### 5.1 Module Trait
+
+所有模块必须实现以下 Trait，与 [SPEC-Impl-Core.md §3 Module Trait 定义](SPEC-Impl-Core.md) 完全一致：
+
+```rust
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+// ─── 健康状态枚举 ───────────────────────────────────
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ModuleHealth {
+    Healthy,
+    Degraded(String),
+    Unhealthy(String),
+}
+
+// ─── 模块元信息 ───────────────────────────────────
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModuleInfo {
+    pub id: String,
+    pub name: String,
+    pub version: String,
+    pub health: ModuleHealth,
+}
+
+// ─── Module Trait ─────────────────────────────────
+#[async_trait::async_trait]
 pub trait Module: Send + Sync {
-    /// 模块唯一标识符，格式为反向域名，如 "cloudfin.p2p.libp2p"
+    // ── 元信息 ──────────────────────────────
     fn id(&self) -> &str;
-
-    /// 人类可读的模块名称
     fn name(&self) -> &str;
-
-    /// 语义化版本号，遵循 semver 2.0.0
     fn version(&self) -> &str;
 
-    /// 模块级别：network | encrypt | sync
-    fn layer(&self) -> ModuleLayer;
+    // ── 生命周期 ────────────────────────────
+    async fn init(&mut self, config: Value) -> anyhow::Result<()>;
+    async fn start(&mut self) -> anyhow::Result<()>;
+    async fn stop(&mut self) -> anyhow::Result<()>;
 
-    /// 异步初始化，接受一个 JSON 配置对象
-    async fn init(&mut self, config: Value) -> Result<()>;
-
-    /// 异步启动模块，进入工作状态
-    async fn start(&mut self) -> Result<()>;
-
-    /// 异步停止模块，释放资源
-    async fn stop(&mut self) -> Result<()>;
-
-    /// 获取模块当前健康状态
+    // ── 状态 ────────────────────────────────
     fn status(&self) -> ModuleHealth;
 
-    /// 通用调用接口，用于 Core 向模块发送指令或查询状态
-    async fn call(&self, method: &str, params: Value) -> Result<Value>;
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ModuleLayer {
-    Network,
-    Encrypt,
-    Sync,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ModuleHealth {
-    /// 未初始化
-    Uninitialized,
-    /// 已初始化但未启动
-    Initialized,
-    /// 运行中
-    Running,
-    /// 已停止
-    Stopped,
-    /// 错误状态
-    Error,
-}
-```
-
-#### 设计说明
-
-- **`Send + Sync`**：所有 Module 必须在多线程环境下安全使用，因为 Core 可能在不同的 async 任务中调用模块方法。
-- **`init/start/stop` 三阶段分离**：init 负责解析配置和申请资源；start 正式进入工作状态；stop 优雅退出。
-- **`call` 方法**：采用 method dispatch 模式，Core 通过 `call("method_name", params)` 向模块发指令，返回 `serde_json::Value`。这避免了为每个操作定义独立 Trait 方法，保持扩展性。
-
-#### call 方法调用示例
-
-```rust
-// Core 侧调用 P2P 模块连接节点
-let result = p2p_module
-    .call("connect", json!({ "peer_id": "/ip4/1.2.3.4/tcp/4001/p2p/Qm..." }))
-    .await?;
-
-// Core 侧查询 CRDT 模块文档版本
-let version = storage_module
-    .call("get_version", json!({ "doc_id": "doc-001" }))
-    .await?;
-```
-
-### 1.2 生命周期
-
-Module 的生命周期由 Core 管理，遵循严格的状态机：
-
-```
-┌──────────────┐   init()   ┌──────────────┐   start()   ┌──────────┐   stop()   ┌─────────┐
-│Uninitialized │ ─────────→ │ Initialized  │ ─────────→ │ Running  │ ─────────→ │ Stopped │
-└──────────────┘            └──────────────┘            └──────────┘            └─────────┘
-       ↑                           │
-       │                           │ (init 失败)
-       └───────────────────────────┘
-                   Error
-```
-
-| 状态 | 说明 | 允许的操作 |
-|------|------|-----------|
-| `Uninitialized` | 模块刚实例化，未加载配置 | 调用 `init()` |
-| `Initialized` | 配置已加载，资源已申请 | 调用 `start()` 或 `stop()` |
-| `Running` | 模块正常工作 | 调用 `call()` 或 `stop()` |
-| `Stopped` | 资源已释放，进入终态 | 无（模块可重新 init） |
-| `Error` | 异常状态 | 可尝试重新 `init()` 或查询错误信息 |
-
-#### 生命周期代码示例
-
-```rust
-pub struct ModuleHandle<M: Module> {
-    inner: M,
-    health: ModuleHealth,
-}
-
-impl<M: Module> ModuleHandle<M> {
-    pub async fn init(&mut self, config: Value) -> Result<()> {
-        assert_eq!(self.health, ModuleHealth::Uninitialized);
-        self.inner.init(config).await?;
-        self.health = ModuleHealth::Initialized;
-        Ok(())
-    }
-
-    pub async fn start(&mut self) -> Result<()> {
-        assert_eq!(self.health, ModuleHealth::Initialized);
-        self.inner.start().await?;
-        self.health = ModuleHealth::Running;
-        Ok(())
-    }
-
-    pub async fn stop(&mut self) -> Result<()> {
-        if self.health == ModuleHealth::Running {
-            self.inner.stop().await?;
+    fn info(&self) -> ModuleInfo {
+        ModuleInfo {
+            id: self.id().to_string(),
+            name: self.name().to_string(),
+            version: self.version().to_string(),
+            health: self.status(),
         }
-        self.health = ModuleHealth::Stopped;
-        Ok(())
     }
+
+    // ── 调用接口 ────────────────────────────
+    async fn call(&self, method: &str, params: Value) -> anyhow::Result<Value>;
 }
 ```
 
-### 1.3 健康状态
+**实现约束：**
 
-`ModuleHealth` 不仅是状态枚举，还承载运行时健康检查信息：
+- 所有模块均使用 `#[async_trait]` 以支持 async 方法的 trait object 安全调用
+- `init` / `start` / `stop` 三阶段严格有序，不得跨阶段调用
+- `call` 方法须自行实现方法分发逻辑（推荐使用 `match method`）
+- 耗时操作须在内部 spawn 任务，避免阻塞 Core 事件循环
+- 线程安全：模块须实现 `Send + Sync`，所有内部状态须使用适当的同步原语
 
-```rust
-#[derive(Debug, Clone)]
-pub struct ModuleHealth {
-    state: ModuleHealthState,
-    message: Option<String>,    // 错误或警告信息
-    uptime_secs: Option<u64>,   // 运行时间（Running 时有效）
-}
+### 5.2 Manifest Schema
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ModuleHealthState {
-    Uninitialized,
-    Initialized,
-    Running,
-    Stopped,
-    Error,
-}
-```
+每个模块 ZIP 包必须包含一个 `.so.json` 文件（Manifest），与 [SPEC-Impl-Core.md §4 Manifest Schema](SPEC-Impl-Core.md) 一致：
 
-Core 应定期轮询各模块的 `status()`，当状态变为 `Error` 时触发告警或自动恢复流程。
-
----
-
-## 2. Module Manifest
-
-### 2.1 Schema 定义
-
-每个 Module 包根目录必须包含 `module.so.json`（或嵌入二进制元数据区），声明模块的元信息、依赖、平台要求等。
-
-以下为完整的 JSON Schema：
+**Manifest 文件名：** `{模块名}.so.json`（与 `.so` 同目录）
 
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "CloudfinModuleManifest",
   "type": "object",
-  "required": ["id", "name", "version", "layer", "entry", "platform"],
+  "required": ["id", "name", "version", "platform"],
+  "additionalProperties": true,
   "properties": {
     "id": {
       "type": "string",
-      "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)+$",
-      "examples": ["cloudfin.p2p.libp2p", "cloudfin.sync.crdt"]
+      "pattern": "^cloudfin\\.[a-z0-9_]+$",
+      "description": "模块唯一标识，格式：cloudfin.{name}，全部小写"
     },
     "name": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 64
+      "description": "模块显示名称"
     },
     "version": {
       "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9]+)?$"
-    },
-    "layer": {
-      "type": "string",
-      "enum": ["network", "encrypt", "sync"]
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "语义化版本（SemVer），格式：MAJOR.MINOR.PATCH"
     },
     "description": {
       "type": "string",
-      "maxLength": 512
+      "description": "模块功能描述"
     },
-    "entry": {
+    "author": {
       "type": "string",
-      "description": "动态库入口文件名（相对于包根目录）"
+      "description": "模块作者"
     },
     "platform": {
-      "$ref": "#/definitions/platform"
-    },
-    "ui": {
-      "$ref": "#/definitions/ui"
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["android", "linux", "windows", "macos", "ios"]
+      },
+      "description": "支持的运行平台列表"
     },
     "permissions": {
-      "$ref": "#/definitions/permissions"
-    },
-    "dependencies": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "string",
-        "pattern": "^\\d+\\.\\d+\\.\\d+$"
-      }
-    },
-    "config_schema": {
-      "type": "object",
-      "description": "JSON Schema for module configuration validation"
-    },
-    "capabilities": {
       "type": "array",
       "items": {
         "type": "string"
-      }
-    }
-  },
-  "definitions": {
-    "platform": {
-      "type": "object",
-      "required": ["os", "arch"],
-      "properties": {
-        "os": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": ["linux", "macos", "windows", "android", "ios"]
-          }
-        },
-        "arch": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": ["x86_64", "aarch64", "armv7", "riscv64"]
-          }
-        },
-        "min_version": {
-          "type": "string",
-          "description": "最低操作系统版本要求"
-        },
-        "glibc_version": {
-          "type": "string",
-          "description": "最低 glibc 版本（Linux）"
-        }
-      }
+      },
+      "description": "所需系统权限列表"
+    },
+    "api_version": {
+      "type": "string",
+      "description": "所需 Core API 版本约束，使用 semver range 格式（如 ^1.0）"
     },
     "ui": {
       "type": "object",
-      "properties": {
-        "label": {
-          "type": "string"
-        },
-        "icon": {
-          "type": "string"
-        },
-        "fields": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ui_field"
+      "description": "UI 声明，详见 SPEC-Impl-UI.md L4 实现文档"
+    }
+  }
+}
+```
+
+**Manifest 示例（cloudfin.p2p.so.json）：**
+
+```json
+{
+  "id": "cloudfin.p2p",
+  "name": "P2P Networking",
+  "version": "0.1.0",
+  "description": "去中心化 P2P 网络模块，基于 libp2p v0.54",
+  "author": "Cloudfin Team",
+  "platform": ["linux", "android"],
+  "permissions": ["network", "file_system"],
+  "api_version": "^1.0",
+  "ui": {
+    "type": "form",
+    "sections": [
+      {
+        "title": "网络设置",
+        "fields": [
+          {
+            "key": "listen_addresses",
+            "label": "监听地址",
+            "type": "text",
+            "default": "/ip4/0.0.0.0/tcp/9000"
+          },
+          {
+            "key": "max_peers",
+            "label": "最大 peer 数",
+            "type": "number",
+            "default": 50
           }
-        }
-      }
-    },
-    "ui_field": {
-      "type": "object",
-      "required": ["name", "type"],
-      "properties": {
-        "name": { "type": "string" },
-        "label": { "type": "string" },
-        "type": {
-          "type": "string",
-          "enum": ["text", "number", "boolean", "select", "password", "slider", "code"]
-        },
-        "default": {},
-        "options": {
-          "type": "array",
-          "items": { "type": "string" }
-        },
-        "min": { "type": "number" },
-        "max": { "type": "number" },
-        "step": { "type": "number" },
-        "placeholder": { "type": "string" },
-        "hint": { "type": "string" },
-        "required": { "type": "boolean" },
-        "depends_on": {
-          "type": "array",
-          "items": { "type": "string" }
-        }
-      }
-    },
-    "permissions": {
-      "type": "object",
-      "properties": {
-        "network": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": ["internet", "local_network", "tor", "i2p"]
-          }
-        },
-        "storage": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": ["read_app_data", "write_app_data", "read_external", "write_external"]
-          }
-        },
-        "system": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": ["notifications", "clipboard", "biometrics"]
-          }
-        }
-      }
-    }
-  }
-}
-```
-
-#### Manifest 示例
-
-```json
-{
-  "id": "cloudfin.p2p.libp2p",
-  "name": "P2P Network Module",
-  "version": "0.1.0",
-  "layer": "network",
-  "description": "基于 libp2p 的 P2P 网络通信模块，支持 NAT穿透和节点发现",
-  "entry": "module.so",
-  "platform": {
-    "os": ["linux", "macos", "windows"],
-    "arch": ["x86_64", "aarch64"],
-    "glibc_version": "2.31"
-  },
-  "ui": {
-    "label": "P2P 网络",
-    "icon": "network",
-    "fields": [
-      {
-        "name": "bootstrap_nodes",
-        "label": "引导节点",
-        "type": "text",
-        "placeholder": "/ip4/1.2.3.4/tcp/4001/p2p/Qm...",
-        "hint": "多个节点用逗号分隔",
-        "required": false
-      },
-      {
-        "name": "enable_relay",
-        "label": "启用中继",
-        "type": "boolean",
-        "default": true
-      },
-      {
-        "name": "max_peers",
-        "label": "最大连接数",
-        "type": "slider",
-        "min": 1,
-        "max": 100,
-        "default": 25
-      }
-    ]
-  },
-  "permissions": {
-    "network": ["internet", "local_network"],
-    "storage": ["read_app_data", "write_app_data"]
-  },
-  "dependencies": {
-    "libp2p": "0.54.0"
-  },
-  "config_schema": {
-    "type": "object",
-    "properties": {
-      "bootstrap_nodes": { "type": "array", "items": { "type": "string" } },
-      "enable_relay": { "type": "boolean" },
-      "max_peers": { "type": "integer", "minimum": 1, "maximum": 100 }
-    }
-  },
-  "capabilities": ["dial", "listen", "relay", "mdns_discovery"]
-}
-```
-
-### 2.2 UI 声明结构
-
-UI 声明允许 Module 在不修改 Core 代码的情况下声明配置表单，Core（或前端）根据声明动态渲染界面。
-
-#### 支持的字段类型
-
-| 类型 | 渲染组件 | 说明 |
-|------|---------|------|
-| `text` | 单行文本框 | 用于字符串输入 |
-| `number` | 数字输入框 | 整数或浮点数 |
-| `boolean` | 开关 | 二值开关 |
-| `select` | 下拉选择框 | `options` 定义选项列表 |
-| `password` | 密码输入框 | 隐藏显示，支持显示切换 |
-| `slider` | 滑块 | 配合 `min`/`max`/`step` 使用 |
-| `code` | 代码编辑器 | 支持语法高亮（JSON/YAML 等） |
-
-#### 条件依赖
-
-`depends_on` 字段支持条件显示：
-
-```json
-{
-  "name": "relay_hop_limit",
-  "label": "中继跳数限制",
-  "type": "number",
-  "default": 3,
-  "depends_on": ["enable_relay"]
-}
-```
-
-上述字段仅在 `enable_relay` 为 `true` 时显示。
-
-### 2.3 平台与架构声明
-
-`platform` 字段声明模块的运行环境要求。Core 在加载前进行平台匹配校验，不匹配的模块不展示或不可启用。
-
-```json
-{
-  "platform": {
-    "os": ["linux", "macos", "windows", "android"],
-    "arch": ["x86_64", "aarch64"],
-    "min_version": {
-      "linux": "5.4",
-      "windows": "10",
-      "macos": "12.0",
-      "android": "8.0"
-    },
-    "glibc_version": "2.31"
-  }
-}
-```
-
-### 2.4 权限声明
-
-模块必须声明所需权限，Core 在安装或首次启用时请求用户授权。
-
-```json
-{
-  "permissions": {
-    "network": ["internet", "local_network", "tor"],
-    "storage": ["read_app_data", "write_app_data", "read_external"],
-    "system": ["notifications"]
-  }
-}
-```
-
-| 权限类型 | 可选值 | 说明 |
-|---------|--------|------|
-| `network` | `internet` | 互联网访问 |
-| `network` | `local_network` | 局域网发现与通信 |
-| `network` | `tor` | TOR 网络路由 |
-| `network` | `i2p` | I2P 网络路由 |
-| `storage` | `read_app_data` | 读取应用私有数据 |
-| `storage` | `write_app_data` | 写入应用私有数据 |
-| `storage` | `read_external` | 读取外部存储 |
-| `storage` | `write_external` | 写入外部存储 |
-| `system` | `notifications` | 系统通知 |
-| `system` | `clipboard` | 剪贴板访问 |
-| `system` | `biometrics` | 生物识别认证 |
-
----
-
-## 3. 通信层 Modules（Network Layer）
-
-通信层负责网络传输，支持多种网络协议和匿名路由方案。各通信模块之间互斥——同一时间只能激活一个。
-
-### 3.1 P2P 模块（libp2p）
-
-**库版本：** libp2p v0.54
-
-#### 3.1.1 核心能力
-
-| 能力 | 说明 |
-|------|------|
-| `dial` | 主动连接远端节点 |
-| `listen` | 监听 incoming 连接 |
-| `relay` | 作为中继协助 NAT 内节点 |
-| `mdns_discovery` | 局域网内节点自动发现 |
-| `kad_discovery` | Kademlia DHT 节点发现 |
-
-#### 3.1.2 NAT 穿透
-
-P2P 模块支持两种 NAT 穿透策略：
-
-1. **中继模式（Relay）**
-   - 模块作为 circuit relay 节点，转发双方流量
-   - 配置项：`enable_relay: bool`
-   - 中继跳数限制：`relay_hop_limit: u8`（默认 3）
-
-2. **NAT 穿透（Hole Punching）**
-   - 直连协商协议（针对对称型 NAT）
-   - 需要双方在线协调，由 Core 提供 rendezvous 服务
-   - 仍无法直连时自动降级为中继
-
-```rust
-// libp2p 配置示例
-let transport = {
-    let tcp = TokioTcpTransport::new(GenTransportConfig::default()
-        .timeout(std::time::Duration::from_secs(10)));
-    
-    let relay = RelayConfig::new();
-    let noise = NoiseConfig::xx(authenticated());
-    
-    tcp.upgrade(Version::V1)
-        .authenticate(noise)
-        .multiplex(yamux::YamuxConfig::default())
-        .boxed()
-};
-```
-
-#### 3.1.3 节点发现
-
-| 方式 | 适用场景 | 配置项 |
-|------|---------|--------|
-| Bootstrap Nodes | 初始化已知节点列表 | `bootstrap_nodes: Vec<String>` |
-| mDNS | 局域网内零配置发现 | `enable_mdns: bool` |
-| Kademlia DHT | 大规模去中心化发现 | `enable_kad: bool` |
-
-```rust
-// 发现服务配置
-let discovery = {
-    let mdns = Mdns::new(MdnsConfig::default()).await?;
-    let kad = KadProtocol::new(KadConfig::new(bootstrap_nodes));
-    vec![Service::new(mdns), Service::new(kad)]
-};
-```
-
-#### 3.1.4 Peer 管理 API
-
-P2P 模块通过 `call()` 方法暴露以下接口：
-
-| method | 说明 | params | return |
-|--------|------|--------|--------|
-| `connect` | 连接指定节点 | `{ peer_id: string, addr?: string }` | `{ success: bool }` |
-| `disconnect` | 断开连接 | `{ peer_id: string }` | `{ success: bool }` |
-| `list_peers` | 列出已连接节点 | `{}` | `{ peers: Vec<PeerInfo> }` |
-| `peer_status` | 查询节点状态 | `{ peer_id: string }` | `{ status: string }` |
-| `add_address` | 手动添加节点地址 | `{ peer_id, addr }` | `{ success: bool }` |
-
-#### 3.1.5 Manifest 声明
-
-```json
-{
-  "id": "cloudfin.p2p.libp2p",
-  "name": "P2P Network Module",
-  "version": "0.1.0",
-  "layer": "network",
-  "entry": "module.so",
-  "platform": {
-    "os": ["linux", "macos", "windows"],
-    "arch": ["x86_64", "aarch64"]
-  },
-  "capabilities": ["dial", "listen", "relay", "mdns_discovery", "kad_discovery"],
-  "permissions": {
-    "network": ["internet", "local_network"]
-  },
-  "ui": {
-    "label": "P2P 网络",
-    "fields": [
-      { "name": "bootstrap_nodes", "type": "text", "label": "引导节点" },
-      { "name": "enable_relay", "type": "boolean", "label": "启用中继", "default": true },
-      { "name": "enable_mdns", "type": "boolean", "label": "局域网发现", "default": true },
-      { "name": "max_peers", "type": "slider", "label": "最大连接数", "min": 1, "max": 100, "default": 25 }
-    ]
-  }
-}
-```
-
----
-
-### 3.2 TOR 模块（arti）
-
-**库版本：** arti（Rust TOR 实现）
-
-#### 3.2.1 Circuit 管理
-
-TOR 模块使用 arti 库，提供洋葱路由电路管理：
-
-```rust
-pub struct TorModule {
-    client: TorClient<Ed25519>,
-    circuits: HashMap<CircuitId, Circuit>,
-    config: TorConfig,
-}
-
-impl Module for TorModule {
-    // ...
-}
-
-#[derive(Debug, Clone)]
-pub struct Circuit {
-    id: CircuitId,
-    purpose: CircuitPurpose,
-    hops: Vec<RelayEndpoint>,
-    created_at: SystemTime,
-    expires_at: SystemTime,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum CircuitPurpose {
-    /// 通用匿名浏览
-    General,
-    /// P2P 节点通信
-    P2P,
-    /// 带出口节点的直连（最弱匿名性）
-    Exit,
-}
-```
-
-#### 3.2.2 匿名流量路由
-
-模块支持将 P2P 流量通过 TOR 路由，提供两层路由选择：
-
-| 路由模式 | 说明 | 匿名等级 |
-|---------|------|---------|
-| `tor-only` | 所有流量走 TOR 电路 | 高 |
-| `tor-p2p` | P2P 信令走 TOR，数据直连 | 中 |
-| `hybrid` | 部分节点走 TOR，部分直连 | 低 |
-
-```json
-{
-  "id": "cloudfin.encrypt.tor",
-  "name": "TOR Module",
-  "version": "0.1.0",
-  "layer": "network",
-  "entry": "module.so",
-  "capabilities": ["tor_circuit", "tor_proxy", "anonymous_routing"],
-  "ui": {
-    "label": "TOR 匿名网络",
-    "fields": [
-      {
-        "name": "routing_mode",
-        "type": "select",
-        "label": "路由模式",
-        "options": ["tor-only", "tor-p2p", "hybrid"],
-        "default": "tor-p2p"
-      },
-      { "name": "num_circuits", "type": "slider", "label": "并发电路数", "min": 1, "max": 10, "default": 3 },
-      { "name": "bridge_enabled", "type": "boolean", "label": "使用网桥", "default": false }
-    ]
-  },
-  "permissions": {
-    "network": ["internet", "tor"]
-  }
-}
-```
-
-#### 3.2.3 Tor 模块 API
-
-| method | 说明 | params |
-|--------|------|--------|
-| `new_circuit` | 创建新电路 | `{ purpose: CircuitPurpose }` |
-| `close_circuit` | 关闭电路 | `{ circuit_id: string }` |
-| `list_circuits` | 列出活跃电路 | `{}` |
-| `tor_proxy` | 将任意流量通过 TOR 代理 | `{ target: string, port: u16 }` |
-| `status` | 获取 TOR 网络状态 | `{}` |
-
----
-
-### 3.3 I2P 模块（待定）
-
-**状态：** 待定（TBD）
-
-#### 背景说明
-
-I2P（ Invisible Internet Project）是另一种匿名网络协议，与 TOR 的主要区别在于：
-
-| 特性 | TOR | I2P |
-|------|-----|-----|
-| 出口节点 | 需要 | 不需要（garlic routing） |
-| 延迟 | 中等 | 较高 |
-| 协议 | 洋葱路由（onion） | 大蒜路由（garlic） |
-| 生态 | 广泛 | 较小 |
-| 适用 | 网页浏览 | 文件共享、P2P |
-
-#### 待定项
-
-- 库选型：i2p sam library（`i2p-rust`）或通过 `i2pd` 守护进程通信
-- circuit 管理方式
-- 与现有 encrypt 层的集成方案
-- Manifest 模板（待实现时补充）
-
----
-
-## 4. 加密层 Modules（Encrypt Layer）
-
-加密层负责端到端加密、密钥交换和安全通信。各加密模块可叠加使用（如 P2P + crypto 同时激活）。
-
-### 4.1 crypto 模块
-
-crypto 模块是 Cloudfin 的核心加密组件，提供 WireGuard 风格的密钥协商和 Noise Protocol 框架支持。
-
-#### 4.1.1 协议选择
-
-| 协议 | 说明 | 适用场景 |
-|------|------|---------|
-| `WireGuard` | 现代 UDP VPN 协议，高性能 | P2P 直连 |
-| `Noise_XX` | Noise Protocol 框架，灵活 | 需要前向保密的场景 |
-| `Noise_KK` | 共享密钥模式 | 预共享密钥组网 |
-
-```rust
-pub struct CryptoModule {
-    protocol: CryptoProtocol,
-    key_store: Arc<KeyStore>,
-    session_manager: SessionManager,
-}
-
-pub enum CryptoProtocol {
-    WireGuard(WireGuardConfig),
-    NoiseXX(NoiseConfig),
-    NoiseKK(NoiseConfig),
-}
-
-impl Module for CryptoModule {
-    fn layer(&self) -> ModuleLayer { ModuleLayer::Encrypt }
-    // ...
-}
-```
-
-#### 4.1.2 密钥交换
-
-crypto 模块采用以下密钥交换流程（以 Noise_XX 为例）：
-
-```
-Alice                          Bob
-  │                              │
-  │  ─── NE(AlicePub) ────────→  │  1. 生成临时椭圆曲线密钥对
-  │                              │
-  │  ←── NE(BobPub) ──────────  │  2. 生成临时密钥对，计算共享密钥
-  │                              │
-  │  ─── ENC(AliceStatic) ───→  │  3. 用 DH 结果加密传输静态公钥
-  │                              │
-  │  ←── ENC(BobStatic) ──────  │  4. Bob 解密并验证 Alice 身份
-  │                              │
-  │  ─── ENC(handshake_done) → │  5. 双方完成密钥派生，进入加密通信
-```
-
-```rust
-// 密钥交换核心代码
-async fn perform_handshake(
-    &self,
-    prologue: &[u8],
-    local_static: &StaticSecret,
-    local_ephemeral: &EphemeralSecret,
-    remote_pubkey: &PublicKey,
-) -> Result<SymmetricState> {
-    let dh_result = local_ephemeral.dh(remote_pubkey)?;
-    let mut state = SymmetricState::new(prologue);
-    state.mix_hash(remote_pubkey.as_bytes());
-    state.mix_key(dh_result.as_bytes())?;
-    Ok(state)
-}
-```
-
-#### 4.1.3 密钥存储
-
-密钥存储采用分层管理：
-
-```rust
-pub trait KeyStore: Send + Sync {
-    /// 生成新的身份密钥对
-    async fn generate_identity(&self, id: &str) -> Result<IdentityKeys>;
-    
-    /// 获取身份密钥对
-    async fn get_identity(&self, id: &str) -> Result<Option<IdentityKeys>>;
-    
-    /// 存储预共享密钥
-    async fn store_psk(&self, id: &str, psk: PreSharedKey) -> Result<()>;
-    
-    /// 删除密钥
-    async fn delete_identity(&self, id: &str) -> Result<()>;
-}
-
-pub struct IdentityKeys {
-    pub static_public: PublicKey,
-    pub static_private: StaticSecret,  // 内存中解密，不持久化明文
-    pub session_cache: SessionCache,
-}
-```
-
-#### 4.1.4 Manifest 声明
-
-```json
-{
-  "id": "cloudfin.encrypt.crypto",
-  "name": "Crypto Module",
-  "version": "0.1.0",
-  "layer": "encrypt",
-  "entry": "module.so",
-  "capabilities": ["wireguard", "noise_xx", "noise_kk", "key_exchange", "forward_secrecy"],
-  "permissions": {
-    "storage": ["read_app_data", "write_app_data"]
-  },
-  "ui": {
-    "label": "加密通信",
-    "fields": [
-      {
-        "name": "protocol",
-        "type": "select",
-        "label": "加密协议",
-        "options": ["wireguard", "noise_xx", "noise_kk"],
-        "default": "noise_xx"
-      },
-      {
-        "name": "enable_pfs",
-        "type": "boolean",
-        "label": "前向保密",
-        "default": true
-      },
-      {
-        "name": "rekey_interval",
-        "type": "slider",
-        "label": "密钥轮换间隔（秒）",
-        "min": 60,
-        "max": 3600,
-        "default": 300
+        ]
       }
     ]
   }
 }
 ```
 
-### 4.2 密钥交换详解
+### 5.3 生命周期
 
-#### 4.2.1 WireGuard 握手
+模块生命周期严格遵循以下状态机（与 [SPEC-Tech-Core.md §4.2 模块生命周期](SPEC-Tech-Core.md) 一致）：
 
 ```
-                   Initiator                          Responder
-                     │                                     │
-  ├─生成临时公钥 (ephemeral_pub)                           │
-  │ ──── REPLY_HEADERS ────────────────────────────────→ │
-  │       + ephemeral_pub                                │
-  │       + timestamp (cookie)                           │
-  │                                                      ├─生成临时公钥 (ephemeral_pub)
-  │                                                      ├─验证 timestamp
-  │       (cookie 解密)                                  │
-  │ ←──── REPLY_COOKIE ──────────────────────────────── │
-  │       + encrypted_cookie                             │
-  │                                                      │
-  │ ──── COOKIE_RESPONSE ────────────────────────────→  │
-  │       + mac(REPLY_HEADERS)                           │
-  │                                                      ├─生成对称密钥 (static_private.dh(ephemeral_pub))
-  │       + 加密的回应消息                                │
-  │                                                      │
-  │ ←──── TRANSPORT_DATA ──────────────────────────── │
+       ┌──────────────────────────────────────────────┐
+       │                  Core 启动                    │
+       └──────────┬───────────────────┬────────────────┘
+                  │ load config      │
+                  ▼                  │
+       ┌──────────────────┐           │
+       │  PluginManager   │◄──────────┘
+       │  ::new(config)   │
+       └────────┬─────────┘
+                │ load_module (for each module entry)
+                ▼
+        ┌───────────────┐
+        │    INIT       │  加载动态库 → 版本校验 → init()
+        └───────┬───────┘
+                │ init() 成功
+                ▼
+        ┌───────────────┐
+        │    START      │  start()，启动业务逻辑
+        └───────┬───────┘
+                │ start() 成功
+                ▼
+        ┌───────────────┐
+        │   RUNNING     │  正常运行，定期健康检查（每 30s）
+        └───────┬───────┘
+                │
+                │ stop() / Core shutdown
+                ▼
+        ┌───────────────┐
+        │     STOP      │  stop()，优雅关闭、释放资源
+        └───────┬───────┘
+                │
+                ▼
+        ┌───────────────┐
+        │   UNLOADED    │  dlclose() 卸载动态库
+        └───────────────┘
 ```
 
-#### 4.2.2 端到端加密流程
+**生命周期状态枚举（`ModuleLifecycle`）：**
 
 ```rust
-impl CryptoModule {
-    /// 加密一条消息
-    pub async fn encrypt(&self, peer: &PeerId, plaintext: &[u8]) -> Result<Ciphertext> {
-        let session = self.session_manager.get_session(peer).await?;
-        let nonce = session.next_nonce()?;
-        let ciphertext = session.encrypt_with_nonce(nonce, plaintext)?;
-        Ok(Ciphertext { nonce, ciphertext })
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModuleLifecycle {
+    Unloaded,
+    Init,
+    Start,
+    Running,
+    Stopping,
+    Stopped,
+}
+```
 
-    /// 解密一条消息
-    pub async fn decrypt(&self, peer: &PeerId, ciphertext: &Ciphertext) -> Result<Vec<u8>> {
-        let session = self.session_manager.get_session(peer).await?;
-        session.decrypt_with_nonce(ciphertext.nonce, &ciphertext.ciphertext)
+**各阶段 Core 行为：**
+
+| 阶段 | Core 行为 | 模块应做事项 |
+|------|----------|------------|
+| `INIT` | 调用 `Module::init(config)` | 解析配置、分配资源、注册 handler |
+| `START` | 调用 `Module::start()` | 启动业务逻辑（连接网络、开始监听等） |
+| `RUNNING` | 每 30s 调用 `Module::status()` | 返回当前健康状态 |
+| `STOP` | 调用 `Module::stop()` | 优雅关闭、保存状态、释放资源 |
+
+**版本校验（`PluginManager::verify_module_version`）：**
+
+```rust
+use semver::{Version, VersionReq};
+
+const CORE_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub fn verify_module_version(module_version_str: &str) -> Result<Version> {
+    let module_version = Version::parse(module_version_str)
+        .map_err(|_| ModuleError::InvalidVersion)?;
+
+    // Core 向后兼容：模块版本 <= Core 版本 + 1 个 minor
+    let compatibility_constraint =
+        format!("<={}.{}.x", CORE_VERSION.major, CORE_VERSION.minor);
+
+    let requirement = VersionReq::parse(&compatibility_constraint)
+        .map_err(|_| ModuleError::InvalidVersionRequirement)?;
+
+    if requirement.matches(&module_version) {
+        Ok(module_version)
+    } else {
+        Err(ModuleError::VersionIncompatible {
+            core: CORE_VERSION.into(),
+            module: module_version_str.into(),
+            requirement: compatibility_constraint,
+        })
     }
 }
 ```
 
-### 4.3 商业授权说明
+**版本兼容规则：**
 
-crypto 模块涉及以下可能需要商业授权的技术：
+| 关系 | 兼容？ |
+|------|--------|
+| 模块 `1.2.x` ≤ Core `1.2.x` | ✅ 兼容 |
+| 模块 `1.1.x` ≤ Core `1.2.x` | ✅ 兼容 |
+| 模块 `1.3.x` > Core `1.2.x` | ❌ 不兼容（跨 minor） |
+| 模块 `2.0.x` vs Core `1.2.x` | ❌ 不兼容（跨 major） |
 
-| 组件 | 许可证 | 说明 |
-|------|--------|------|
-| Curve25519 | BSD / Apache 2.0 | 无限制 |
-| ChaCha20-Poly1305 | BSD / Apache 2.0 | 无限制 |
-| WireGuard 协议 | GPL 2.0 | 实现需注意 GPL 传染性 |
-| Noise Protocol | Public Domain / CC0 | 无限制 |
+### 5.4 健康状态（HealthStatus）
 
-**建议：**
-- 若采用纯 Rust 实现（Ring + curve25519-dalek），可保持 Apache 2.0 / MIT 许可证兼容
-- WireGuard 协议本身 GPL，但仅使用协议规范实现无需 GPL 授权（参考 wireguard-rs 争议）
-- 商业项目建议法务评估，或使用 Noise_XX 替代避免协议层面的 GPL 问题
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HealthStatus {
+    Healthy,
+    Degraded(String),   // 可恢复的异常，带原因描述
+    Unhealthy(String), // 严重异常
+    Unknown,
+}
+```
+
+**健康检查结果处理：**
+
+| 状态 | WebSocket 推送 | 处理建议 |
+|------|--------------|---------|
+| `Healthy` | `module.health` 事件（可选） | 无需干预 |
+| `Degraded(reason)` | `module.health` 事件 | 记录日志，尝试自动恢复 |
+| `Unhealthy(reason)` | `module.health` 事件 | 记录日志，考虑自动重启模块 |
+| `Unknown` | — | 模块未响应健康检查 |
 
 ---
 
-## 5. 同步层 Modules（Sync Layer）
-
-同步层负责数据的分布式同步和持久化，包含 CRDT 协作编辑模块和本地存储模块。
-
-### 5.1 CRDT 模块（yrs）
-
-**库版本：** yrs 0.22
-
-#### 5.1.1 文档结构
-
-CRDT 模块基于 yrs（Yjs Rust 实现），支持树状文档结构：
-
-```rust
-pub struct CrdtModule {
-    doc: Arc<RwLock<YDoc>>,
-    provider: SyncProvider,
-    config: CrdtConfig,
-}
-
-impl Module for CrdtModule {
-    // ...
-}
-```
-
-**支持的 Yjs 数据类型：**
-
-| Yjs 类型 | Rust 类型 | 说明 |
-|---------|----------|------|
-| `YText` | `YText` | 可并发编辑的文本（CRDT 字符序列） |
-| `YMap` | `YMap` | 键值映射（Last-Write-Wins） |
-| `YArray` | `YArray` | 有序列表 |
-| `YXmlFragment` | `YXmlFragment` | XML 树结构 |
-
-```rust
-// 创建文档并操作
-let doc = YDoc::new();
-let text: YText = doc.get_or_create_text("content");
-let mut text_mut = text.write();
-text_mut.insert(0, "Hello, ")?;
-text_mut.insert(7, "CRDT!")?;
-
-// 创建 Map
-let map: YMap = doc.get_or_create_map("metadata");
-let mut map_mut = map.write();
-map_mut.insert("author", "Alice")?;
-map_mut.insert("version", 1)?;
-```
-
-#### 5.1.2 同步协议
-
-CRDT 模块通过以下协议进行节点间同步：
-
-```
-┌─────────┐                         ┌─────────┐
-│  Node A │                         │  Node B │
-└────┬────┘                         └────┬────┘
-     │                                   │
-     │ ─── StateVector A ────────────→  │  A 询问 B 的已知状态
-     │                                   │
-     │ ←── StateVector B ────────────  │  B 回应自己的状态
-     │                                   │
-     │ ─── Update(A ⊖ B) ────────────→ │  A 发送 B 未有的更新
-     │                                   │
-     │ ←── Update(B ⊖ A) ────────────  │  B 发送 A 未有的更新
-     │                                   │
-     │  双方状态一致                      │
-```
-
-```rust
-pub trait SyncProtocol {
-    /// 获取本地状态向量
-    fn state_vector(&self) -> StateVector;
-    
-    /// 计算需要同步的增量更新
-    fn diff_updates(&self, remote_state: &StateVector) -> Vec<Update>;
-    
-    /// 应用来自远端的更新
-    fn apply_updates(&self, updates: Vec<Update>) -> Result<()>;
-}
-```
-
-#### 5.1.3 冲突解决（LWW）
-
-CRDT 模块使用 **Last-Write-Wins Register (LWW)** 作为默认冲突解决策略：
-
-```rust
-/// LWW 寄存器实现
-pub struct LwwRegister<T> {
-    clock: Arc<Mutex<HLC>>,
-    value: Arc<RwLock<(T, LamportTimestamp, PeerId)>>,
-}
-
-impl<T: Clone + 'static> Mergeable for LwwRegister<T> {
-    fn merge(&mut self, other: &(T, LamportTimestamp, PeerId)) {
-        let mut guard = self.value.write().unwrap();
-        if other.1 > guard.1 || (other.1 == guard.1 && other.2 > guard.0) {
-            *guard = other.clone();
-        }
-    }
-}
-
-/// HLC（Hybrid Logical Clocks）实现
-pub struct HLC {
-    wall_time: u64,
-    logical: u64,
-    node_id: PeerId,
-}
-
-impl HLC {
-    pub fn now(&mut self) -> LamportTimestamp {
-        let wall = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64;
-        
-        if wall > self.wall_time {
-            self.wall_time = wall;
-            self.logical = 0;
-        } else {
-            self.logical += 1;
-        }
-        
-        LamportTimestamp {
-            wall: self.wall_time,
-            logical: self.logical,
-            node: self.node_id.clone(),
-        }
-    }
-}
-```
-
-**LWW 冲突解决规则：**
-1. 比较时间戳（物理时间优先，相同则比较 `logical` 计数器）
-2. 若时间戳完全相同（不同节点 HLC 碰撞），比较 `PeerId` 字典序
-3. 胜出者的值覆盖当前值
-
-#### 5.1.4 Manifest 声明
-
-```json
-{
-  "id": "cloudfin.sync.crdt",
-  "name": "CRDT Module",
-  "version": "0.1.0",
-  "layer": "sync",
-  "entry": "module.so",
-  "capabilities": ["ytext", "ymap", "yarray", "sync", "offline_edit", "persistence"],
-  "dependencies": {
-    "yrs": "0.22.0"
-  },
-  "ui": {
-    "label": "协作编辑",
-    "fields": [
-      {
-        "name": "sync_mode",
-        "type": "select",
-        "label": "同步模式",
-        "options": ["eager", "lazy"],
-        "default": "eager",
-        "hint": "eager: 实时同步所有变更; lazy: 按需拉取"
-      },
-      {
-        "name": "gc_enabled",
-        "type": "boolean",
-        "label": "垃圾回收",
-        "default": true,
-        "hint": "清理已删除内容的 CRDT 元数据"
-      },
-      {
-        "name": "snapshot_interval",
-        "type": "slider",
-        "label": "快照间隔（秒）",
-        "min": 30,
-        "max": 600,
-        "default": 120
-      }
-    ]
-  },
-  "permissions": {
-    "storage": ["read_app_data", "write_app_data"]
-  }
-}
-```
-
-#### 5.1.5 CRDT 模块 API
-
-| method | 说明 | params | return |
-|--------|------|--------|--------|
-| `create_doc` | 创建新文档 | `{ doc_id: string }` | `{ doc_id: string }` |
-| `get_text` | 获取文本类型 | `{ doc_id, field }` | `{ content: string }` |
-| `update_text` | 更新文本 | `{ doc_id, field, delta }` | `{ version: u64 }` |
-| `get_map` | 获取 Map | `{ doc_id, field }` | `{ entries: object }` |
-| `observe` | 监听变更 | `{ doc_id, field }` | `Notification` stream |
-| `snapshot` | 创建快照 | `{ doc_id }` | `{ snapshot: Vec<u8> }` |
-| `restore` | 恢复快照 | `{ doc_id, snapshot }` | `{ success: bool }` |
-
----
-
-### 5.2 Storage 模块
-
-Storage 模块提供本地持久化抽象，负责数据的存储路径管理、自动备份和导出功能。
-
-#### 5.2.1 存储抽象
-
-```rust
-pub trait StorageBackend: Send + Sync {
-    /// 读取数据
-    async fn read(&self, path: &Path) -> Result<Bytes>;
-    
-    /// 写入数据
-    async fn write(&self, path: &Path, data: Bytes) -> Result<()>;
-    
-    /// 删除数据
-    async fn delete(&self, path: &Path) -> Result<()>;
-    
-    /// 列出目录
-    async fn list(&self, dir: &Path) -> Result<Vec<PathBuf>>;
-    
-    /// 检查是否存在
-    async fn exists(&self, path: &Path) -> bool;
-}
-
-pub enum StorageBackendType {
-    /// 本地文件系统
-    LocalFileSystem,
-    /// SQLite 数据库
-    Sqlite,
-    /// RocksDB（嵌入式 KV）
-    RocksDB,
-    /// S3 兼容对象存储
-    S3Compatible,
-}
-```
-
-#### 5.2.2 路径管理
-
-存储模块采用固定的目录布局：
-
-```
-{app_data_dir}/
-├── cloudfin/
-│   ├── config.json           # 全局配置
-│   ├── modules/              # 模块目录
-│   │   ├── cloudfin.p2p.libp2p/
-│   │   │   ├── module.so
-│   │   │   ├── manifest.json
-│   │   │   └── data/         # 模块私有数据
-│   │   └── cloudfin.encrypt.crypto/
-│   │       └── ...
-│   ├── data/                 # 用户数据
-│   │   ├── docs/             # CRDT 文档
-│   │   │   ├── doc-001.ycrdt
-│   │   │   └── doc-002.ycrdt
-│   │   └── snapshots/        # CRDT 快照
-│   ├── keys/                 # 密钥存储（权限隔离）
-│   ├── logs/                 # 日志文件
-│   └── backups/              # 自动备份
-```
-
-#### 5.2.3 备份与导出
-
-```rust
-pub struct BackupManager {
-    storage: Arc<dyn StorageBackend>,
-    retention_days: u32,
-    compression: CompressionType,
-}
-
-pub enum BackupFormat {
-    /// 压缩 JSON
-    Json,
-    /// CRDT 二进制快照
-    YSnapshot,
-    /// 完整 ZIP 归档
-    Zip,
-}
-
-impl BackupManager {
-    /// 创建备份
-    pub async fn create_backup(&self, doc_id: &str) -> Result<BackupId> {
-        let snapshot = self.take_snapshot(doc_id).await?;
-        let compressed = self.compress(snapshot).await?;
-        let backup_path = self.generate_backup_path(doc_id);
-        self.storage.write(&backup_path, compressed).await?;
-        Ok(BackupId { doc_id: doc_id.into(), path: backup_path })
-    }
-
-    /// 导出数据（用户主动）
-    pub async fn export(&self, doc_id: &str, format: ExportFormat) -> Result<PathBuf> {
-        match format {
-            ExportFormat::Json => self.export_json(doc_id).await,
-            ExportFormat::Markdown => self.export_markdown(doc_id).await,
-            ExportFormat::Pdf => self.export_pdf(doc_id).await,
-        }
-    }
-
-    /// 清理过期备份
-    pub async fn prune_old_backups(&self) -> Result<u32> {
-        let cutoff = SystemTime::now() - Duration::days(self.retention_days as i64);
-        let mut pruned = 0;
-        for backup in self.list_backups().await? {
-            if backup.created_at < cutoff {
-                self.storage.delete(&backup.path).await?;
-                pruned += 1;
-            }
-        }
-        Ok(pruned)
-    }
-}
-```
-
-#### 5.2.4 Manifest 声明
-
-```json
-{
-  "id": "cloudfin.sync.storage",
-  "name": "Storage Module",
-  "version": "0.1.0",
-  "layer": "sync",
-  "entry": "module.so",
-  "capabilities": ["local_fs", "backup", "export", "prune", "encryption_at_rest"],
-  "ui": {
-    "label": "数据存储",
-    "fields": [
-      {
-        "name": "backend",
-        "type": "select",
-        "label": "存储后端",
-        "options": ["local_fs", "sqlite", "rocksdb"],
-        "default": "local_fs"
-      },
-      {
-        "name": "backup_enabled",
-        "type": "boolean",
-        "label": "自动备份",
-        "default": true
-      },
-      {
-        "name": "backup_interval",
-        "type": "slider",
-        "label": "备份间隔（小时）",
-        "min": 1,
-        "max": 72,
-        "default": 6
-      },
-      {
-        "name": "retention_days",
-        "type": "slider",
-        "label": "备份保留（天）",
-        "min": 1,
-        "max": 365,
-        "default": 30
-      },
-      {
-        "name": "export_format",
-        "type": "select",
-        "label": "默认导出格式",
-        "options": ["json", "markdown", "pdf"],
-        "default": "json"
-      }
-    ]
-  },
-  "permissions": {
-    "storage": ["read_app_data", "write_app_data", "read_external", "write_external"]
-  }
-}
-```
-
----
-
-## 6. 分发格式
+## 6. 模块分发格式
 
 ### 6.1 ZIP 包结构
 
-Module 以 ZIP 压缩包形式分发，包名为 `{module_id}-{version}.zip`，结构如下：
+每个模块以 ZIP 格式分发，命名规范：
 
 ```
-cloudfin.p2p.libp2p-0.1.0.zip
-├── module.so              # 动态链接库（实际入口文件）
-├── module.so.json        # Module Manifest
-├── module.so.sig         # 签名文件（可选，用于校验来源）
-├── icon.png              # 模块图标（256x256, PNG）
-├── preview.png           # 预览图（可选）
-├── README.md             # 模块说明文档
-├── CHANGELOG.md          # 变更日志
-├── locales/
-│   ├── zh-CN.json        # 中文本地化
-│   ├── en-US.json        # 英文本地化
-│   └── ja-JP.json        # 日文本地化（可选）
-└── resources/            # 静态资源（可选）
-    ├── wasm/
-    └── config_templates/
+CloudFin-Mod-{Type}-{OS}-{Name}-v{YYYYMMDD}-{NNN}.zip
 ```
 
-#### 签名验证
+**其中：**
 
-```rust
-pub async fn verify_module(package: &[u8], signature: &[u8], public_key: &PublicKey) -> Result<bool> {
-    use ed25519_dalek::{Signature, Signer, Verifier};
-    
-    let sig = Signature::from_bytes(signature.try_into()?);
-    Ok(public_key.verify(package, &sig).is_ok())
+| 占位符 | 含义 | 示例 |
+|--------|------|------|
+| `Type` | 模块类型 | `Network` / `Encrypt` / `Sync` |
+| `OS` | 操作系统 | `Linux` / `Windows` / `MacOS` |
+| `Name` | 模块名称 | `P2P` / `TOR` / `CRDT` / `crypto` / `Storage` |
+| `YYYYMMDD` | 发布日期 | `20260405` |
+| `NNN` | 当日迭代序号（从 001） | `001` |
+
+> **注意：** Linux 适用于 Android 和 Linux；MacOS 适用于 macOS 和 iOS。
+
+**ZIP 包内文件结构：**
+
+```
+CloudFin-Mod-Network-Linux-P2P-v20260405-001.zip
+├── CloudFin-Mod-Network-Linux-P2P-v20260405-001.so    # 模块二进制
+└── CloudFin-Mod-Network-Linux-P2P-v20260405-001.so.json  # Manifest
+```
+
+**Manifest（`.so.json`）内包含的字段（与 §5.2 Schema 一致）：**
+
+```json
+{
+  "id": "cloudfin.p2p",
+  "name": "P2P Networking",
+  "version": "0.1.0",
+  "description": "...",
+  "author": "...",
+  "platform": ["linux", "android"],
+  "permissions": ["network", "file_system"],
+  "api_version": "^1.0",
+  "ui": { ... }
 }
 ```
 
 ### 6.2 安装目录
 
-Core 将模块安装到固定目录：
+模块安装后存放于：
 
-| 路径 | 说明 |
+```
+{CoreRoot}/Cloudfin/
+└── modules/                              # 模块文件目录
+    ├── CloudFin-Mod-Network-Linux-P2P-v20260405-001.so
+    ├── CloudFin-Mod-Network-Linux-P2P-v20260405-001.so.json
+    ├── CloudFin-Mod-Sync-Linux-CRDT-v20260405-001.so
+    ├── CloudFin-Mod-Sync-Linux-CRDT-v20260405-001.so.json
+    └── ...
+```
+
+**核心规则：`.so` 二进制文件和对应的 `.so.json` Manifest 文件必须放在同一目录下。**
+
+配置存储在：
+
+```
+{CoreRoot}/Cloudfin/config/modules/
+    ├── cloudfin.p2p.json
+    ├── cloudfin.tor.json
+    ├── cloudfin.crdt.json
+    └── cloudfin.storage.json
+```
+
+运行时数据存储在：
+
+```
+{CoreRoot}/Cloudfin/data/
+    ├── tor/                 # TOR 模块数据
+    ├── storage/            # Storage 模块数据
+    └── ...                  # 其他模块数据
+```
+
+### 6.3 版本文件命名规范
+
+**Core 版本格式：**
+
+```
+Cloudfin-Core-{OS}-{Arch}-v{YYYYMMDD}-{NNN}.{format}
+```
+
+**Modules 版本格式：**
+
+```
+CloudFin-Mod-{Type}-{OS}-{Name}-v{YYYYMMDD}-{NNN}.zip
+```
+
+**UI 版本格式：**
+
+```
+Cloudfin-UI-{OS}-{Arch}-v{YYYYMMDD}-{NNN}.{format}
+```
+
+**架构标识对照表：**
+
+| CPU 架构 | 标识 | 备注 |
+|---------|------|------|
+| x86_64 | `amd64` | 桌面 / 服务器主流 |
+| arm64 / aarch64 | `arm64` | Apple Silicon / ARM 服务器 |
+| arm64-v8a（Android） | `arm64-v8a` | Android 完整架构标识 |
+
+**OS 标识对照表（Modules）：**
+
+| 操作系统 | Modules OS 标识 | 备注 |
+|---------|---------------|------|
+| Linux | `Linux` | Android 与 Linux 共用 |
+| Windows | `Windows` | — |
+| macOS / iOS | `MacOS` | macOS 与 iOS 共用 |
+
+**模块类型对照表：**
+
+| Type | 含义 | 对应 Modules |
+|------|------|------------|
+| `Network` | 通信层 | p2p、tor、i2p |
+| `Encrypt` | 加密层 | crypto |
+| `Sync` | 同步层 | crdt、storage |
+
+**分发包名完整示例：**
+
+| 模块 | 包名 |
 |------|------|
-| `{app_data}/modules/{module_id}/{version}/` | 当前激活版本 |
-| `{app_data}/modules/{module_id}/.pending/` | 升级待安装版本 |
-| `{app_data}/modules/{module_id}/.rollback/` | 回滚版本（最近一个旧版本） |
-
-#### 安装流程
-
-```
-1. 下载 ZIP 包 → {app_data}/modules/{id}/.pending/
-2. 验证签名（signature）→ 失败则删除并报错
-3. 验证 Manifest schema → 失败则删除并报错
-4. 解压到 {app_data}/modules/{id}/{version}/
-5. 原子替换符号链接或版本文件
-6. 删除 .pending/ 目录
-7. 如升级成功，将旧版本移至 .rollback/（仅保留一个）
-```
-
-### 6.3 版本文件命名
-
-版本文件命名规则：`version-{semver}.lock`
-
-```
-modules/
-└── cloudfin.p2p.libp2p/
-    ├── version-0.1.0.lock     # 当前激活版本
-    ├── version-0.1.0/          # 实际模块文件
-    ├── version-0.0.9.lock      # 可回滚版本
-    ├── version-0.0.9/
-    ├── .pending/               # 安装中
-    └── .rollback/              # 备用回滚
-```
-
-#### version lock 文件格式
-
-```json
-{
-  "version": "0.1.0",
-  "installed_at": "2026-04-05T10:30:00Z",
-  "checksum": "sha256:a3f5c...",
-  "signature": "base64...",
-  "manifest_hash": "sha256:b7d9e..."
-}
-```
-
-#### 版本兼容矩阵
-
-| Core 版本 | 支持的 Module 版本策略 |
-|----------|----------------------|
-| Core 1.x | Module 0.x 任意版本 |
-| Core 2.x | Module 1.x + Module 0.x（向后兼容） |
-| 未来 | 通过 semver 范围声明约束 |
+| P2P（Linux） | `CloudFin-Mod-Network-Linux-P2P-v20260405-001.zip` |
+| TOR（Linux） | `CloudFin-Mod-Network-Linux-TOR-v20260405-001.zip` |
+| crypto（Windows） | `CloudFin-Mod-Encrypt-Windows-crypto-v20260405-001.zip` |
+| CRDT（Linux） | `CloudFin-Mod-Sync-Linux-CRDT-v20260405-001.zip` |
+| Storage（MacOS） | `CloudFin-Mod-Sync-MacOS-Storage-v20260405-001.zip` |
 
 ---
 
-## 附录 A：Module 层与 Core 的交互
+## 附录 A：模块快速参考
 
-```
-┌──────────────────────────────────────────────────────┐
-│                       Core                            │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐     │
-│  │ModuleLoader│  │ModuleManager│  │ EventBus   │     │
-│  └─────┬──────┘  └──────┬─────┘  └─────┬──────┘     │
-└────────┼───────────────┼──────────────┼────────────┘
-         │               │              │
-         │ load(id)      │ register()   │ emit(event)
-         ▼               ▼              ▼
-┌──────────────────────────────────────────────────────┐
-│                     Modules                           │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐            │
-│  │ P2P      │  │ Crypto   │  │ CRDT     │  ...       │
-│  │ (network)│  │(encrypt) │  │ (sync)   │            │
-│  └──────────┘  └──────────┘  └──────────┘            │
-│                                                        │
-│  所有模块不直接通信，通过 Core 调度                     │
-└──────────────────────────────────────────────────────┘
-```
+### A.1 模块清单
 
-**Core 提供的能力（供 Module 调用）：**
+| 模块 ID | 名称 | 层次 | 底层实现 | 许可 |
+|--------|------|------|---------|------|
+| `cloudfin.p2p` | P2P Networking | 通信层 | libp2p v0.54 | AGPL-3.0 |
+| `cloudfin.tor` | TOR Anonymous Network | 通信层 | arti | AGPL-3.0 |
+| `cloudfin.i2p` | I2P Tunnel | 通信层 | 待定 | 待定 |
+| `cloudfin.crypto` | End-to-End Encryption | 加密层 | WireGuard / Noise | 商业授权 |
+| `cloudfin.crdt` | CRDT Document Sync | 同步层 | yrs 0.22 | AGPL-3.0 |
+| `cloudfin.storage` | Persistent Storage | 同步层 | RocksDB / Sled | AGPL-3.0 |
 
-| 能力 | 说明 |
-|------|------|
-| `Core::emit(event, payload)` | 向事件总线发布事件 |
-| `Core::dial(target)` | 请求 Core 代为连接节点 |
-| `Core::storage()` | 获取 StorageBackend 实例 |
-| `Core::config()` | 获取全局配置 |
+### A.2 关键依赖版本
+
+| 依赖 | 版本 | 所属模块 |
+|------|------|---------|
+| `libp2p` | v0.54 | p2p |
+| `arti` | latest | tor |
+| `yrs` | 0.22 | crdt |
+| `libloading` | ^0.8 | Core（动态加载） |
+| `rocksdb` | latest | storage |
+| `sled` | latest | storage（备选） |
+| `semver` | ^1.0 | Core（版本校验） |
 
 ---
 
-## 附录 B：模块清单（计划）
-
-| 模块 ID | 名称 | 层 | 状态 | 优先级 |
-|---------|------|-----|------|--------|
-| `cloudfin.p2p.libp2p` | P2P 模块 | network | 实现中 | P0 |
-| `cloudfin.encrypt.tor` | TOR 模块 | network | 实现中 | P1 |
-| `cloudfin.encrypt.i2p` | I2P 模块 | network | TBD | P2 |
-| `cloudfin.encrypt.crypto` | 加密模块 | encrypt | 实现中 | P0 |
-| `cloudfin.sync.crdt` | CRDT 模块 | sync | 实现中 | P0 |
-| `cloudfin.sync.storage` | 存储模块 | sync | 实现中 | P1 |
-
----
-
-## 附录 C：常见问题（FAQ）
-
-**Q: Module 之间如何通信？**
-A: Modules 之间不直接通信。所有交互通过 Core 中转：Module A 调用 `Core::emit(event)` 发布消息，Core 将消息路由给订阅的 Module B。这确保了模块间的松耦合和可插拔性。
-
-**Q: 多个同层模块能否同时激活？**
-A: 通信层模块（network）同一时间只能激活一个，因为它们都试图管理网络传输。加密层和同步层模块可以叠加（如 crypto + crdt + storage）。
-
-**Q: 模块崩溃后 Core 如何处理？**
-A: 模块的 `status()` 变为 `Error`，Core 触发告警。可配置自动重启（重新 init + start）或降级到备用模块。
-
-**Q: 如何升级运行中的模块？**
-A: 通过热升级流程：安装新版本到 `.pending/`，验证通过后切换符号链接，新版本 init + start 成功后旧版本移至 `.rollback/`。整个过程对用户无感知。
-
----
-
-*本文档为工作草案（Working Draft），待核心团队评审后生效。*
+*本文件为 Cloudfin Modules 路线级技术文档（L3），所有实现细节以 L2 [SPEC-Impl-Core.md](SPEC-Impl-Core.md) 和代码为准。如有变更须经评审后更新。*
