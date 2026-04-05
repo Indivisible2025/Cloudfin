@@ -9,6 +9,8 @@
 
 ## 1. Modules 系统概述
 
+> **语言约定：Modules 层统一使用 Rust**，通过 `#[no_std]` + alloc + libc 编译为 `.so/.dylib`，通过 Rust FFI 与 Core（Rust）交互。
+
 ### 1.1 三层 Modules 定位
 
 Cloudfin Modules 是 Core 的可插拔扩展，按功能分为三层，三层之间**不直接通信**，统一由 Core 充当中介和调度器。

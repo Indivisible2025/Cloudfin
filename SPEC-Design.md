@@ -60,7 +60,15 @@ UI 与 Core/Modules 严格分离：UI 是独立进程，可以是任意平台的
 - **加密层** = 装修 + 安全设施，在通信基础上加一层保护
 - **同步层** = 人在工作 + 车在通行，真正有价值的业务在这一层发生
 
-五层各司其职，任一层换语言、换框架，其他层**无需修改**。
+### 1.2 Modules 语言约定
+
+**Modules 层仅使用 Rust**，通过 `#[no_std]` + alloc + libc 编译为 `.so/.dylib`，通过 Rust FFI 与 Core（Rust）交互。
+
+> Rust 保证内存安全 + 跨平台 FFI 简单 + 性能最优。
+
+### 1.3 三层 Modules 定位
+
+Modules 层统一使用 Rust（通过 FFI 与 Core 交互）；UI 层选择各平台官方语言（Android Kotlin / iOS Swift / Desktop 各自选择）。Modules 层换语言其他层无需修改；UI 层与其他层完全解耦。
 
 ### 1.3 核心功能需求
 
