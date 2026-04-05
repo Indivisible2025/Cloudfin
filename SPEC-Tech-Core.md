@@ -953,10 +953,14 @@ kill $(cat {CoreRoot}/Cloudfin/cloudfin.pid)
 ├── cloudfin-core          # 可执行文件
 ├── config/
 │   ├── core.json          # Core 主配置
-│   └── modules.json        # 模块清单
-├── modules/
-│   ├── libtrader-binance.so
-│   └── libnotifier-dingtalk.so
+│   └── modules/           # 模块配置目录（每个模块一个 .json）
+│       ├── p2p.json
+│       └── crdt.json
+├── modules/               # 模块文件目录（.so 和 .so.json 同目录）
+│   ├── CloudFin-Mod-Linux-amd64-P2P-v20260405-001.so
+│   ├── CloudFin-Mod-Linux-amd64-P2P-v20260405-001.so.json
+│   ├── CloudFin-Mod-Linux-amd64-CRDT-v20260405-001.so
+│   └── CloudFin-Mod-Linux-amd64-CRDT-v20260405-001.so.json
 ├── logs/
 │   ├── cloudfin.log
 │   └── cloudfin.log.2026-04-04
