@@ -23,9 +23,9 @@ Cloudfin 项目分为三个独立仓库：
 Cloudfin/
 ├── SPEC-Design.md        ← L0 纲领级（设计总纲）
 ├── SPEC-Tech-Core.md     ← L1 路线级（Core 技术选型）
-├── SPEC-Tech-UI.md      ← L2 路线级（UI 技术选型）
-├── SPEC-Tech-Modules.md  ← L2 路线级（Modules 技术选型）
-├── SPEC-Impl-Core.md    ← L3 实现级（Core 最终决策）
+├── SPEC-Impl-Core.md    ← L2 实现级（Core 最终决策）
+├── SPEC-Tech-UI.md      ← L3 路线级（UI 技术选型）
+├── SPEC-Tech-Modules.md  ← L3 路线级（Modules 技术选型）
 ├── SPEC-Impl-UI.md     ← L4 实现级（UI 最终决策，待编写）
 ├── SPEC-Impl-Modules.md ← L4 实现级（Modules 最终决策，待编写）
 ├── README.md             ← 本文件
