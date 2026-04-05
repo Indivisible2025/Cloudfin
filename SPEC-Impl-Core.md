@@ -350,7 +350,7 @@ pub trait Module: Send + Sync {
     },
     "ui": {
       "type": "object",
-      "description": "UI 声明（详见第 5 节 UI 声明规范）"
+      "description": "UI 声明（详见 SPEC-Impl-UI.md L4 实现文档）"
     }
   }
 }
