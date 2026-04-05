@@ -32,7 +32,11 @@
 - **选定**：WebSocket + JSON
 - **理由**：双平台通用（Android / iOS / Desktop）、调试友好、支持全双工持久连接、方案成熟
 
-## 2. Core WebSocket API
+### 1.4 Core 版本管理
+
+- **版本来源**：`Cargo.toml` 中的 `version` 字段，编译时通过 `env!("CARGO_PKG_VERSION")` 嵌入二进制
+- **版本格式**：遵循发布版本命名（如 `v2026.04.05.001`），由 CI/CD 在构建时写入
+- **UI 查询**：通过 `core.info` action 获取，连接后首个调用
 
 ### 2.1 WebSocket端点
 
@@ -42,6 +46,33 @@
 ### 2.2 API Actions
 
 所有请求均为 JSON-RPC 风格，采用 `type: "request"` / `type: "response"` / `type: "error"` / `type: "event"` 四种消息类型。
+
+#### core.info — 查询 Core 版本信息
+
+UI 连接后首个调用的 action，用于确认 Core 版本。
+
+```json
+{
+  "type": "request",
+  "action": "core.info",
+  "request_id": "uuid-v4",
+  "data": {}
+}
+```
+
+**响应示例**：
+
+```json
+{
+  "type": "response",
+  "request_id": "uuid-v4",
+  "data": {
+    "name": "cloudfin-core",
+    "version": "v2026.04.05.001",
+    "api_version": "1"
+  }
+}
+```
 
 #### module.list — 列出所有已加载模块
 
