@@ -83,6 +83,26 @@ pub enum CoreEvent {
 
 ---
 
+## 2. Core 版本管理
+
+Core 版本号由 `Cargo.toml` 中的 `version` 字段定义，编译时通过 `env!("CARGO_PKG_VERSION")` 嵌入二进制。
+
+UI 通过 `core.info` action 获取版本信息：
+
+```json
+// 请求
+{ "action": "core.info", "data": {} }
+
+// 响应
+{
+  "name": "cloudfin-core",
+  "version": "v2026.04.05.001",
+  "api_version": "1"
+}
+```
+
+---
+
 ## 2. Core API 设计
 
 ### 2.1 WebSocket 端点
@@ -122,7 +142,12 @@ Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
   "request_id": "req_abc123",
   "action": "status_snapshot",
   "timestamp": "2026-04-05T14:00:00Z",
-  "payload": {}
+  "payload": {
+    "name": "cloudfin-core",
+    "version": "v2026.04.05.001",
+    "api_version": "1",
+    "modules": [...]
+  }
 }
 ```
 
