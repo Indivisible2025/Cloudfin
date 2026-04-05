@@ -325,39 +325,76 @@ UI 根据 manifest 动态渲染配置面板
   core_api_version: "1.2"   # 表示该模块依赖 Core API 1.2
 ```
 
-### 7.4 平台与架构标识
+### 7.4 版本命名规范
 
-#### 系统标识
-
-| 操作系统 | 标识 |
-|---------|------|
-| Windows | `windows` |
-| Linux | `linux` |
-| macOS | `macos` |
-| Android | `android` |
-| iOS | `ios` |
-
-#### 架构标识
-
-| CPU 架构 | Release 标识 | 说明 |
-|---------|------------|------|
-| x86_64 | `amd64` | 桌面/服务器主流 |
-| arm64 / aarch64 | `arm64` | Apple Silicon / 服务器 |
-| arm64-v8a（Android） | `arm64-v8a` | 安卓完整架构标识 |
-
-> **注意：** `x86_64` 在 UI 显示和 Release 文件名中统一使用 `amd64`。
-
-#### 模块分发文件名格式
+#### UI 版本格式
 
 ```
-CloudFin-Mod-{系统标识}-{架构标识}-{模块名}-{版本}.zip
+Cloudfin-UI-{系统}-{架构}-v{年}{月}{日}-{当日迭代序号}.{包格式}
 ```
+
+| 字段 | 说明 |
+|------|------|
+| 系统 | `Android` / `Linux` / `Windows` |
+| 架构 | `arm64-v8a` / `arm64` / `amd64` |
+| 当日迭代序号 | 三位数字，从 001 开始，每日重置 |
+| 包格式 | Android: `apk` / Linux: `tar.gz` / `deb` / `AppImage` / Windows: `exe` |
 
 示例：
 ```
-CloudFin-Mod-Linux-amd64-P2P-0.1.0.zip
-CloudFin-Mod-Android-arm64-v8a-CRDT-0.1.0.zip
+Cloudfin-UI-Android-arm64-v8a-v20260405-001.apk
+Cloudfin-UI-Linux-amd64-v20260405-001.tar.gz
+Cloudfin-UI-Windows-amd64-v20260405-001.exe
 ```
+
+#### Core 版本格式
+
+```
+Cloudfin-Core-{系统}-{架构}-v{年}{月}{日}-{当日迭代序号}.{包格式}
+```
+
+| 字段 | 说明 |
+|------|------|
+| 系统 | `Android` / `Linux` / `Windows` |
+| 架构 | `arm64-v8a` / `arm64` / `amd64` |
+| 当日迭代序号 | 三位数字，从 001 开始，每日重置 |
+| 包格式 | Android: `apk` / Linux: `tar.gz` / Windows: `exe` |
+
+示例：
+```
+Cloudfin-Core-Android-arm64-v8a-v20260405-001.apk
+Cloudfin-Core-Linux-amd64-v20260405-001.tar.gz
+Cloudfin-Core-Windows-amd64-v20260405-001.exe
+```
+
+#### Modules 版本格式
+
+```
+Cloudfin-Module-{模块英文名}-{系统}-v{年}{月}{日}-{当日迭代序号}.zip
+```
+
+| 字段 | 说明 |
+|------|------|
+| 模块英文名 | P2P / CRDT / TOR / Storage 等 |
+| 系统 | `Linux`（Android 和 Linux 共用）/ `Windows` / `MacOS`（macOS 和 iOS 共用）|
+| 当日迭代序号 | 三位数字，从 001 开始，每日重置 |
+
+示例：
+```
+Cloudfin-Module-P2P-Linux-v20260405-001.zip
+Cloudfin-Module-CRDT-Windows-v20260405-001.zip
+Cloudfin-Module-TOR-MacOS-v20260405-001.zip
+```
+
+> **注意：** Modules 系统分组中，`Linux` 同时适用于 Android 和 Linux，`MacOS` 同时适用于 macOS 和 iOS。
+
+#### 架构标识（通用）
+
+| CPU 架构 | 标识 | 说明 |
+|---------|------|------|
+| x86_64 | `amd64` | 桌面/服务器主流 |
+| arm64 / aarch64 | `arm64` | Apple Silicon / 服务器 |
+| arm64-v8a（Android） | `arm64-v8a` | 安卓完整架构标识 |
 
 ---
 
