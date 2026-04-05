@@ -1100,7 +1100,7 @@ interface UIState {
   modules: Map<string, ModuleInfo>;
   theme: 'system' | 'light' | 'dark';
   sidebar: {
-    selectedSection: 'core' | 'network' | 'encrypt' | 'sync' | 'settings';
+    selectedSection: '核心' | '通信' | '加密' | '同步' | '设置';
     selectedModule: string | null;
   };
 }
